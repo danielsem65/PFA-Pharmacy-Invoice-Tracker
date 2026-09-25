@@ -399,17 +399,15 @@ class SoftCardBorder extends OutlinedBorder {
       );
 
   @override
-  ShapeBorder copyWith({BorderSide? side, BorderRadius? borderRadius}) {
-    return SoftCardBorder(
-      radius: borderRadius?.topLeft.x ?? radius,
-      fill: fill,
-      side: side ?? this.side,
-      shadowColor: shadowColor,
-      shadowBlur: shadowBlur,
-      shadowSpread: shadowSpread,
-      shadowOffset: shadowOffset,
-    );
-  }
+  SoftCardBorder copyWith({BorderSide? side}) => SoftCardBorder(
+        radius: radius,
+        fill: fill,
+        side: side ?? this.side,
+        shadowColor: shadowColor,
+        shadowBlur: shadowBlur,
+        shadowSpread: shadowSpread,
+        shadowOffset: shadowOffset,
+      );
 
   @override
   ShapeBorder scale(double t) => SoftCardBorder(
