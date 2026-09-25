@@ -72,11 +72,107 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
       return a.dueDate.compareTo(b.dueDate);
     });
 
-    final allSelected = sorted.isNotEmpty && sorted.every((s) => _selected.contains(s.id));
+    final allSelected =
+        sorted.isNotEmpty && sorted.every((s) => _selected.contains(s.id));
 
     return Scaffold(
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 18, 16, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Invoices',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${invoices.length} ${invoices.length == 1 ? 'invoice' : 'invoices'} · ${DateFormat('EEEE, d MMMM yyyy').format(now)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                MoreMenuButton(),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  onPressed: () => context.go('/new'),
+                  icon: const Icon(Icons.add),
+                  label: const Text('New Invoice'),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 14, 16, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      hintText: 'Search invoices…',
+                      prefixIcon: Icon(Icons.search),
+                      isDense: true,
+                    ),
+                    onChanged: (v) => setState(() => _query = v),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outlineVariant
+                          .withValues(alpha: 0.7),
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: DropdownButton<String?>(
+                    value: _filterSupplierId,
+                    hint: const Text('All suppliers'),
+                    underline: const SizedBox.shrink(),
+                    borderRadius: BorderRadius.circular(14),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('All suppliers'),
+                      ),
+                      for (final Supplier s in suppliers)
+                        DropdownMenuItem<String?>(
+                          value: s.id,
+                          child: Text(s.name),
+                        ),
+                    ],
+                    onChanged: (v) => setState(() => _filterSupplierId = v),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'Select invoices',
+                  onPressed: sorted.isEmpty
+                      ? null
+                      : () => setState(() {
+                            _selectionMode = true;
+                            if (_selected.isEmpty) {
+                              _selected.add(sorted.first.id);
+                            }
+                          }),
+                  icon: const Icon(Icons.checklist_rounded),
+                ),
+              ],
+            ),
+          ),
           if (_selectionMode)
             _SelectionBar(
               count: _selected.length,
@@ -94,132 +190,88 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
               allSelected: allSelected,
               onExportCsv: _selected.isEmpty
                   ? null
-                  : () => exportCsv(context, ref, invoices: true, invoiceIds: _selected),
+                  : () =>
+                      exportCsv(context, ref, invoices: true, invoiceIds: _selected),
               onExportZip: _selected.isEmpty
                   ? null
                   : () => exportZip(context, ref, invoiceIds: _selected),
               onDelete: _selected.isEmpty
                   ? null
                   : () => _confirmBulkDelete(context, sorted),
-            )
-          else
-            _Header(
-              outstanding: totalOwing,
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Row(
-              children: [
-                _SummaryPill(
-                  label: 'INVOICES',
-                  value: '${allVisible.length}',
-                  icon: Icons.receipt_long_outlined,
-                  gradient: StatCard.primary,
-                ),
-                const SizedBox(width: 10),
-                _SummaryPill(
-                  label: 'OVERDUE',
-                  value: formatPesewas(overdue),
-                  icon: Icons.warning_amber_rounded,
-                  gradient: StatCard.danger,
-                ),
-                const SizedBox(width: 10),
-                _SummaryPill(
-                  label: 'UNPAID',
-                  value: '$openCount',
-                  icon: Icons.pending_actions_outlined,
-                  gradient: StatCard.neutral,
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            padding: const EdgeInsets.fromLTRB(24, 18, 16, 0),
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      hintText: 'Search invoices…',
-                      prefixIcon: Icon(Icons.search),
-                      isDense: true,
-                    ),
-                    onChanged: (v) => setState(() => _query = v),
+                  child: StatCard(
+                    label: 'Total outstanding',
+                    value: formatPesewas(totalOwing),
+                    icon: Icons.account_balance_wallet_outlined,
+                    gradient: StatCard.primary,
                   ),
                 ),
                 const SizedBox(width: 10),
-                IconButton(
-                  tooltip: 'Select invoices',
-                  onPressed: sorted.isEmpty
-                      ? null
-                      : () => setState(() {
-                            _selectionMode = true;
-                            if (_selected.isEmpty) {
-                              _selected.add(sorted.first.id);
-                            }
-                          }),
-                  icon: const Icon(Icons.checklist_rounded),
+                Expanded(
+                  child: StatCard(
+                    label: 'Overdue',
+                    value: formatPesewas(overdue),
+                    icon: Icons.warning_amber_rounded,
+                    gradient: StatCard.danger,
+                  ),
                 ),
-                const SizedBox(width: 6),
-                DropdownButton<String?>(
-                  value: _filterSupplierId,
-                  hint: const Text('All suppliers'),
-                  borderRadius: BorderRadius.circular(14),
-                  underline: const SizedBox.shrink(),
-                  items: [
-                    const DropdownMenuItem<String?>(
-                      value: null,
-                      child: Text('All suppliers'),
-                    ),
-                    for (final Supplier s in suppliers)
-                      DropdownMenuItem<String?>(
-                        value: s.id,
-                        child: Text(s.name),
-                      ),
-                  ],
-                  onChanged: (v) => setState(() => _filterSupplierId = v),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: StatCard(
+                    label: 'Unpaid',
+                    value: '$openCount',
+                    icon: Icons.pending_actions_outlined,
+                    gradient: StatCard.neutral,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: StatCard(
+                    label: 'Invoices',
+                    value: '${allVisible.length}',
+                    icon: Icons.receipt_long_outlined,
+                    gradient: StatCard.primary,
+                  ),
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 14),
           Expanded(
             child: sorted.isEmpty
                 ? _EmptyInvoices(onAdd: () => context.go('/new'))
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 88),
-                    itemCount: sorted.length,
-                    itemBuilder: (context, index) {
-                      final inv = sorted[index];
-                      return _InvoiceCard(
-                        invoice: inv,
-                        supplierName: nameOf(inv.supplierId),
-                        selectionMode: _selectionMode,
-                        selected: _selected.contains(inv.id),
-                        onTap: () {
-                          if (_selectionMode) {
-                            setState(() {
-                              if (!_selected.add(inv.id)) _selected.remove(inv.id);
-                            });
-                          } else {
-                            context.go('/invoices/${inv.id}');
-                          }
-                        },
-                        onLongPress: () {
-                          setState(() {
-                            _selectionMode = true;
-                            _selected.add(inv.id);
-                          });
-                        },
-                      );
+                : _InvoiceTable(
+                    invoices: sorted,
+                    supplierNames: {
+                      for (final s in suppliers) s.id: s.name,
                     },
+                    now: now,
+                    selectionMode: _selectionMode,
+                    selected: _selected,
+                    onToggle: (id) => setState(() {
+                      if (!_selected.add(id)) _selected.remove(id);
+                    }),
+                    onOpen: (id) {
+                      if (_selectionMode) {
+                        setState(() {
+                          if (!_selected.add(id)) _selected.remove(id);
+                        });
+                      } else {
+                        context.go('/invoices/$id');
+                      }
+                    },
+                    onEnterSelection: (id) => setState(() {
+                      _selectionMode = true;
+                      _selected.add(id);
+                    }),
                   ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/new'),
-        icon: const Icon(Icons.add),
-        label: const Text('Invoice'),
       ),
     );
   }
@@ -253,7 +305,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
         ],
       ),
     );
-    if (ok != true || !mounted) return;
+    if (ok != true || !mounted || !context.mounted) return;
 
     final removed = visible.where((i) => selectedIds.contains(i.id)).toList();
     final storage = ref.read(receiptStorageProvider);
@@ -285,71 +337,62 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.outstanding});
+class _InvoiceTable extends StatelessWidget {
+  const _InvoiceTable({
+    required this.invoices,
+    required this.supplierNames,
+    required this.now,
+    required this.selectionMode,
+    required this.selected,
+    required this.onToggle,
+    required this.onOpen,
+    required this.onEnterSelection,
+  });
 
-  final int outstanding;
+  final List<SupplierInvoice> invoices;
+  final Map<String, String> supplierNames;
+  final DateTime now;
+  final bool selectionMode;
+  final Set<String> selected;
+  final ValueChanged<String> onToggle;
+  final ValueChanged<String> onOpen;
+  final ValueChanged<String> onEnterSelection;
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final dateLabel = DateFormat('EEEE, d MMMM yyyy').format(now);
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 16, 12, 30),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0B3B52), Color(0xFF0E7490)],
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.6),
         ),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
       ),
+      margin: const EdgeInsets.fromLTRB(24, 0, 16, 20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Invoice Tracker',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      dateLabel,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.75),
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              MoreMenuButton(color: Colors.white),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Text(
-            'TOTAL OUTSTANDING',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.7),
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            formatPesewas(outstanding),
-            style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                ),
+          _HeaderRow(selectionMode: selectionMode),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView.builder(
+              itemCount: invoices.length,
+              itemBuilder: (context, index) {
+                final inv = invoices[index];
+                return _InvoiceRow(
+                  invoice: inv,
+                  supplierName:
+                      supplierNames[inv.supplierId] ?? 'Unknown',
+                  now: now,
+                  selectionMode: selectionMode,
+                  selected: selected.contains(inv.id),
+                  onTap: () => onOpen(inv.id),
+                  onToggle: () => onToggle(inv.id),
+                  onSecondaryTap: () {
+                    if (!selectionMode) onEnterSelection(inv.id);
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -357,265 +400,147 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _SummaryPill extends StatelessWidget {
-  const _SummaryPill({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.gradient,
-  });
+class _HeaderRow extends StatelessWidget {
+  const _HeaderRow({required this.selectionMode});
 
-  final String label;
-  final String value;
-  final IconData icon;
-  final List<Color> gradient;
+  final bool selectionMode;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: gradient,
+    final style = Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.4,
+        );
+    Widget cell(String label, {double flex = 1, TextAlign align = TextAlign.left}) {
+      return Expanded(
+        flex: flex ~/ 1,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+          child: Text(
+            label,
+            textAlign: align,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: style,
           ),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: gradient.first.withValues(alpha: 0.28),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
-        child: Row(
-          children: [
-            Icon(icon, size: 18, color: Colors.white.withValues(alpha: 0.95)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.6,
-                        ),
-                  ),
-                  Text(
-                    value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      );
+    }
+
+    return Row(
+      children: [
+        if (selectionMode) const SizedBox(width: 18),
+        cell('Supplier', flex: 22),
+        cell('Invoice No', flex: 13),
+        cell('Due', flex: 10),
+        cell('Total', flex: 10, align: TextAlign.right),
+        cell('Paid', flex: 10, align: TextAlign.right),
+        cell('Balance', flex: 10, align: TextAlign.right),
+        cell('Status', flex: 12),
+      ],
     );
   }
 }
 
-class _InvoiceCard extends StatelessWidget {
-  const _InvoiceCard({
+class _InvoiceRow extends StatelessWidget {
+  const _InvoiceRow({
     required this.invoice,
     required this.supplierName,
+    required this.now,
     required this.selectionMode,
     required this.selected,
     required this.onTap,
-    required this.onLongPress,
+    required this.onToggle,
+    required this.onSecondaryTap,
   });
 
   final SupplierInvoice invoice;
   final String supplierName;
+  final DateTime now;
   final bool selectionMode;
   final bool selected;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback onToggle;
+  final VoidCallback onSecondaryTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final now = DateTime.now();
     final status = invoice.statusAt(now);
+    final texts = Theme.of(context).textTheme;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: selected
-            ? scheme.primaryContainer.withValues(alpha: 0.55)
-            : scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(18),
-        elevation: 0,
-        child: InkWell(
-          onTap: onTap,
-          onLongPress: onLongPress,
-          borderRadius: BorderRadius.circular(18),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: selected
-                    ? scheme.primary.withValues(alpha: 0.6)
-                    : scheme.outlineVariant.withValues(alpha: 0.5),
-                width: selected ? 1.6 : 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                if (selectionMode)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: Checkbox(
-                      value: selected,
-                      onChanged: (_) => onTap(),
-                    ),
-                  ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  supplierName,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleSmall
-                                      ?.copyWith(fontWeight: FontWeight.w700),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 2),
-                                Wrap(
-                                  spacing: 6,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  children: [
-                                    Text(
-                                      invoice.invoiceNumber,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            color: scheme.onSurfaceVariant,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                    ),
-                                    Text(
-                                      '· Due ${formatDate(invoice.dueDate)}',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            color: scheme.onSurfaceVariant,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          StatusBadge(status: status),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      const Divider(height: 1),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          _MoneyStat(
-                            label: 'TOTAL',
-                            value: formatPesewas(invoice.totalPesewas),
-                          ),
-                          Container(
-                            width: 1,
-                            height: 28,
-                            color: scheme.outlineVariant.withValues(alpha: 0.6),
-                          ),
-                          _MoneyStat(
-                            label: 'PAID',
-                            value: formatPesewas(invoice.amountPaidPesewas),
-                          ),
-                          Container(
-                            width: 1,
-                            height: 28,
-                            color: scheme.outlineVariant.withValues(alpha: 0.6),
-                          ),
-                          _MoneyStat(
-                            label: 'BALANCE',
-                            value: formatPesewas(invoice.balancePesewas),
-                            emphasized: invoice.owesMoney,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MoneyStat extends StatelessWidget {
-  const _MoneyStat({
-    required this.label,
-    required this.value,
-    this.emphasized = false,
-  });
-
-  final String label;
-  final String value;
-  final bool emphasized;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-          ),
-          const SizedBox(height: 1),
-          Text(
-            value,
+    Widget cell(String text, {double flex = 1, TextAlign align = TextAlign.left, TextStyle? style}) {
+      return Expanded(
+        flex: flex ~/ 1,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          child: Text(
+            text,
+            textAlign: align,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: emphasized
-                      ? Theme.of(context).colorScheme.error
-                      : Theme.of(context).colorScheme.onSurface,
-                ),
+            style: style,
           ),
-        ],
+        ),
+      );
+    }
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Material(
+        color: selected
+            ? scheme.primaryContainer.withValues(alpha: 0.45)
+            : Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          onSecondaryTap: onSecondaryTap,
+          hoverColor: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          child: Row(
+            children: [
+              if (selectionMode)
+                Padding(
+                  padding: const EdgeInsets.only(left: 6, right: 2),
+                  child: Checkbox(
+                    value: selected,
+                    onChanged: (_) => onToggle(),
+                  ),
+                ),
+              cell(supplierName, flex: 22,
+                  style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+              cell(invoice.invoiceNumber, flex: 13,
+                  style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              cell(formatDate(invoice.dueDate), flex: 10),
+              cell(
+                formatPesewas(invoice.totalPesewas),
+                flex: 10,
+                align: TextAlign.right,
+                style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              cell(formatPesewas(invoice.amountPaidPesewas), flex: 10,
+                  align: TextAlign.right),
+              cell(
+                formatPesewas(invoice.balancePesewas),
+                flex: 10,
+                align: TextAlign.right,
+                style: texts.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: invoice.owesMoney ? scheme.error : scheme.onSurface,
+                ),
+              ),
+              Expanded(
+                flex: 12,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: StatusBadge(status: status),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -643,12 +568,13 @@ class _SelectionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.primaryContainer,
-      child: SafeArea(
-        bottom: false,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 12, 16, 0),
+      child: Material(
+        color: scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           child: Row(
             children: [
               IconButton(
@@ -659,7 +585,7 @@ class _SelectionBar extends StatelessWidget {
               Expanded(
                 child: Text(
                   count == 0 ? 'Select invoices' : '$count selected',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w800,
                         color: scheme.onPrimaryContainer,
                       ),
@@ -671,9 +597,7 @@ class _SelectionBar extends StatelessWidget {
                 tooltip: 'Select all',
                 onPressed: onSelectAll,
                 icon: Icon(
-                  allSelected
-                      ? Icons.deselect
-                      : Icons.select_all,
+                  allSelected ? Icons.deselect : Icons.select_all,
                   color: scheme.onPrimaryContainer,
                 ),
               ),

@@ -7,6 +7,7 @@ import '../features/invoices/invoice_form_screen.dart';
 import '../features/invoices/invoices_screen.dart';
 import '../features/suppliers/supplier_form_screen.dart';
 import '../features/suppliers/suppliers_screen.dart';
+import '../widgets/app_sidebar.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -85,25 +86,23 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      body: navigationShell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) => navigationShell.goBranch(
-          index,
-          initialLocation: index == navigationShell.currentIndex,
-        ),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
-            label: 'Invoices',
+      body: Row(
+        children: [
+          AppSidebar(
+            index: navigationShell.currentIndex,
+            onSelect: (index) => navigationShell.goBranch(
+              index,
+              initialLocation: index == navigationShell.currentIndex,
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.local_shipping_outlined),
-            selectedIcon: Icon(Icons.local_shipping),
-            label: 'Suppliers',
+          VerticalDivider(
+            width: 1,
+            thickness: 1,
+            color: scheme.outlineVariant.withValues(alpha: 0.4),
           ),
+          Expanded(child: navigationShell),
         ],
       ),
     );

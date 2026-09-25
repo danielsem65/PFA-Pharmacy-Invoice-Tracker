@@ -106,7 +106,7 @@ void main() {
       );
       await pumpApp(tester, store);
 
-      await tester.tap(find.text('Invoice').last);
+      await tester.tap(find.text('New Invoice'));
       await tester.pumpAndSettle();
 
       expect(find.text('New Invoice'), findsOneWidget);
@@ -140,7 +140,7 @@ void main() {
       final store = InMemoryLocalStore(suppliers: [supplier('s1', 'Pharma Co')]);
       await pumpApp(tester, store);
 
-      await tester.tap(find.text('Invoice').last);
+      await tester.tap(find.text('New Invoice'));
       await tester.pumpAndSettle();
 
       await tester.enterText(
