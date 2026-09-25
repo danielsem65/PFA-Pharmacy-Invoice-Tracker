@@ -74,7 +74,7 @@ void main() {
         CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
       );
       expect(title.value.toString(), 'PFA Pharmacy Invoice Tracker');
-      expect(title.cellStyle?.horizontalAlign, HorizontalAlign.Center);
+      expect(title.cellStyle?.horizontalAlignment, HorizontalAlign.Center);
       expect(sheet.spannedItems, contains('A1:B1'));
     });
 
