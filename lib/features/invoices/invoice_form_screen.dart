@@ -276,9 +276,7 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
   Future<void> _lookUpProduct() async {
     final chosen = await showDialog<Product>(
       context: context,
-      builder: (context) => _ProductLookupDialog(
-        products: ref.read(productsProvider),
-      ),
+      builder: (context) => const _ProductLookupDialog(),
     );
     if (chosen == null || !mounted) return;
     _addLineFromProduct(chosen);
@@ -1291,16 +1289,14 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
 
 /// Picks a product from the catalogue to drop onto an invoice line, so a name
 /// that is already on file never has to be typed again.
-class _ProductLookupDialog extends StatefulWidget {
-  const _ProductLookupDialog({required this.products});
-
-  final List<Product> products;
+class _ProductLookupDialog extends ConsumerStatefulWidget {
+  const _ProductLookupDialog();
 
   @override
-  State<_ProductLookupDialog> createState() => _ProductLookupDialogState();
+  ConsumerState<_ProductLookupDialog> createState() => _ProductLookupDialogState();
 }
 
-class _ProductLookupDialogState extends State<_ProductLookupDialog> {
+class _ProductLookupDialogState extends ConsumerState<_ProductLookupDialog> {
   final _query = TextEditingController();
 
   @override
@@ -1311,14 +1307,15 @@ class _ProductLookupDialogState extends State<_ProductLookupDialog> {
 
   @override
   Widget build(BuildContext context) {
+    // Watched rather than read: the catalogue is loaded off the page, so the
+    // list arrives a moment after the dialog opens.
+    final products = ref.watch(productsProvider);
     final scheme = Theme.of(context).colorScheme;
     final typed = _query.text.trim();
     final needle = typed.toLowerCase();
     final matches = needle.isEmpty
-        ? widget.products
-        : widget.products
-            .where((p) => p.normalizedName.contains(needle))
-            .toList();
+        ? products
+        : products.where((p) => p.normalizedName.contains(needle)).toList();
 
     Widget pick(Product product, {String? label, IconData? icon}) {
       return ListTile(
@@ -1369,7 +1366,7 @@ class _ProductLookupDialogState extends State<_ProductLookupDialog> {
             ),
             const SizedBox(height: 10),
             Expanded(
-              child: widget.products.isEmpty
+              child: products.isEmpty
                   ? Center(
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -1396,7 +1393,7 @@ class _ProductLookupDialogState extends State<_ProductLookupDialog> {
                             label: 'Use "$typed"',
                             icon: Icons.add,
                           ),
-                        if (widget.products.isNotEmpty &&
+                        if (products.isNotEmpty &&
                             matches.isEmpty &&
                             typed.isEmpty)
                           Padding(

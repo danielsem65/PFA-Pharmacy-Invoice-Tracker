@@ -297,7 +297,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Look up a product'), findsOneWidget);
-      await tester.enterText(find.byType(TextField).last, 'Panadol');
+      final search = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(search, 'Panadol');
       await tester.pumpAndSettle();
       await tester.tap(find.text('Panadol Extra'));
       await tester.pumpAndSettle();
@@ -348,14 +352,17 @@ void main() {
       Future<void> addLine(String name) async {
         await tester.tap(find.text('Add item'));
         await tester.pumpAndSettle();
-        final fields = find.widgetWithText(TextFormField, 'Product name');
-        await tester.enterText(fields.last, name);
+        // The line just added is the one on top of the list.
         await tester.enterText(
-          find.widgetWithText(TextFormField, 'Boxes').last,
+          find.widgetWithText(TextFormField, 'Product name').first,
+          name,
+        );
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Boxes').first,
           '1',
         );
         await tester.enterText(
-          find.widgetWithText(TextFormField, 'Price per box (GH₵)').last,
+          find.widgetWithText(TextFormField, 'Price per box (GH₵)').first,
           '10',
         );
         await tester.pumpAndSettle();
