@@ -78,6 +78,19 @@ void main() {
       expect(sheet.spannedItems, contains('A1:B1'));
     });
 
+    test('right-aligns the money columns', () {
+      final excel = Excel.decodeBytes(buildSampleWorkbook());
+      final sheet = excel.tables['Invoices']!;
+      final subtotal = headersOf(
+        readXlsx(buildSampleWorkbook()).sheet('Invoices'),
+        0,
+      ).indexOf('Subtotal (GH₵)');
+      final cell = sheet.cell(
+        CellIndex.indexByColumnRow(columnIndex: subtotal, rowIndex: 1),
+      );
+      expect(cell.cellStyle?.horizontalAlignment, HorizontalAlign.Right);
+    });
+
     test('writes money as numbers in cedis, not pesewas or text', () {
       final sheet = readXlsx(buildSampleWorkbook()).sheet('Invoices');
       final subtotal = headersOf(sheet, 0).indexOf('Subtotal (GH₵)');

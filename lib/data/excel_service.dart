@@ -347,14 +347,15 @@ void _buildSummarySheet(
   final title = sheet.maxRows;
   sheet.appendRow([TextCellValue('PFA Pharmacy Invoice Tracker')]);
   final titleCell = CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: title);
-  sheet.cell(titleCell).cellStyle = _titleStyle;
   // The title is one long line of text and the two columns under it are
-  // narrow, so it is given both of them and centred across the pair.
+  // narrow, so it is given both of them and centred across the pair. Merging
+  // resets the style of the cell it starts at, so the style goes on afterwards.
   sheet.merge(
     titleCell,
     CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: title),
   );
   sheet.setMergedCellStyle(titleCell, _titleStyle);
+  sheet.cell(titleCell).cellStyle = _titleStyle;
   line('Exported', DateFormat('dd/MM/yyyy HH:mm').format(now));
   line('Invoices', '${invoices.length}');
   line('Suppliers', '${suppliers.length}');
