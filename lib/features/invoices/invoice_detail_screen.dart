@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/format.dart';
 import '../../data/receipt_storage.dart';
-import '../../models/supplier_inv.dart';
+import '../../models/supplier_invoice.dart';
 import 'invoices_controller.dart';
 import '../suppliers/suppliers_controller.dart';
 
