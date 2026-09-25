@@ -384,10 +384,13 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
                           decoration: const InputDecoration(
                             labelText: 'Tax %',
                           ),
-                          validator: (v) =>
-                              _parsePercent(v ?? '') == null
-                                  ? '0–100'
-                                  : null,
+                          validator: (v) {
+                            final t = (v ?? '').trim();
+                            if (t.isEmpty || _parsePercent(t) != null) {
+                              return null;
+                            }
+                            return '0–100';
+                          },
                         ),
                       ),
                     ],
