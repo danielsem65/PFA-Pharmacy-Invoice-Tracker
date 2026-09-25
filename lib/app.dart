@@ -10,9 +10,9 @@ class App extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Turns any paid amount that was typed straight onto an invoice into a
-    // payment record, so the ledger explains every peso from day one.
-    ref.watch(paymentSyncProvider);
+    // Keeps the payment ledger loaded and in step with the invoices, so every
+    // peso paid is explained by a record.
+    ref.watch(paymentsProvider);
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'PFA Pharmacy Invoice Tracker',

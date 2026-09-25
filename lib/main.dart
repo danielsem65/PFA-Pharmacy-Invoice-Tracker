@@ -4,10 +4,11 @@ import 'package:window_manager/window_manager.dart';
 
 import 'app.dart';
 
-/// Big enough for the invoice tables side by side, small enough to sit next to
-/// another window without swallowing the screen.
-const _openingSize = Size(1280, 820);
-const _smallestSize = Size(980, 640);
+/// Small enough to sit beside another window without swallowing the desktop,
+/// and still wide enough for the invoice tables. The floor sits a little under
+/// the opening size so the opening size is always reachable.
+const _openingSize = Size(950, 550);
+const _smallestSize = Size(900, 500);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

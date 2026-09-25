@@ -61,7 +61,6 @@ void main() {
               ],
             ),
           );
-      await container.read(paymentSyncProvider.future);
 
       final invoices = container.read(invoicesProvider);
       final first = invoices.firstWhere((i) => i.id == 'i1');
@@ -77,7 +76,11 @@ void main() {
       final container = containerFor(
         InMemoryLocalStore(
           invoices: <SupplierInvoice>[
-            invoice(id: 'i1', amountPesewas: 10000),
+            invoice(
+              id: 'i1',
+              amountPesewas: 10000,
+              dueDate: DateTime(2030, 1, 31),
+            ),
           ],
         ),
       );
@@ -91,7 +94,6 @@ void main() {
               ],
             ),
           );
-      await container.read(paymentSyncProvider.future);
 
       final inv = container.read(invoicesProvider).single;
       expect(inv.amountPaidPesewas, 2500);
@@ -112,7 +114,6 @@ void main() {
       );
 
       await container.read(paymentsProvider.notifier).ready;
-      await container.read(paymentSyncProvider.future);
       await container.read(paymentsProvider.notifier).add(
             Payment(
               date: DateTime(2026, 4, 1),
@@ -121,7 +122,6 @@ void main() {
               ],
             ),
           );
-      await container.read(paymentSyncProvider.future);
 
       final inv = container.read(invoicesProvider).single;
       expect(inv.paidDate, isNotNull);
@@ -147,11 +147,9 @@ void main() {
           ],
         ),
       );
-      await container.read(paymentSyncProvider.future);
       expect(container.read(invoicesProvider).single.amountPaidPesewas, 6000);
 
       await notifier.remove(container.read(paymentsProvider).single.id);
-      await container.read(paymentSyncProvider.future);
 
       expect(container.read(paymentsProvider), isEmpty);
       expect(container.read(invoicesProvider).single.amountPaidPesewas, 0);
@@ -176,7 +174,6 @@ void main() {
               ],
             ),
           );
-      await container.read(paymentSyncProvider.future);
 
       final inv = container.read(invoicesProvider).single;
       expect(inv.amountPaidPesewas, 10000);
@@ -205,7 +202,6 @@ void main() {
               ],
             ),
           );
-      await container.read(paymentSyncProvider.future);
 
       final one = container.read(supplierPaymentTotalsProvider('s1'));
       expect(one.paidPesewas, 15000);
@@ -290,13 +286,15 @@ void main() {
       );
       final container = containerFor(store);
 
-      await container.read(paymentSyncProvider.future);
-      await container.read(paymentSyncProvider.future);
+      // Reading the ledger is what seeds the records for invoices that were
+      // marked paid before the ledger existed.
+      await container.read(paymentsProvider.notifier).ready;
 
       final invoices = container.read(invoicesProvider);
       expect(invoices.firstWhere((i) => i.id == 'i1').amountPaidPesewas, 10000);
       expect(invoices.firstWhere((i) => i.id == 'i2').amountPaidPesewas, 0);
       expect(container.read(paymentsProvider), hasLength(1));
+      expect(store.payments, hasLength(1));
     });
   });
 }

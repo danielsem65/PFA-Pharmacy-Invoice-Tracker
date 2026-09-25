@@ -10,14 +10,23 @@ class PaymentsController extends StateNotifier<List<Payment>> {
     ready = _load();
   }
 
-  /// Completes once the saved payment records are in memory.
+  /// Completes once the saved payment records are in memory, including the
+  /// ones seeded for paid amounts that predate the ledger.
   late final Future<void> ready;
 
   final LocalStore _store;
   final Ref _ref;
 
   Future<void> _load() async {
-    state = await _store.loadPayments();
+    final stored = await _store.loadPayments();
+    // Turn any paid amount that was typed straight onto an invoice into a
+    // record, so the ledger explains every peso from the first day. Running it
+    // on every load is what makes it safe: an invoice that is already covered
+    // gains nothing.
+    await _ref.read(invoicesProvider.notifier).ready;
+    final seeded = legacyPaymentsFor(_ref.read(invoicesProvider), stored);
+    state = [...seeded, ...stored];
+    if (seeded.isNotEmpty) await _store.savePayments(state);
   }
 
   Future<void> refresh() => _load();
@@ -35,14 +44,6 @@ class PaymentsController extends StateNotifier<List<Payment>> {
       },
       sign: 1,
     );
-  }
-
-  /// Adds records that only record something already true, so the invoice
-  /// totals are left alone.
-  Future<void> addMany(List<Payment> payments) async {
-    if (payments.isEmpty) return;
-    state = [...payments, ...state];
-    await _store.savePayments(state);
   }
 
   /// Deletes a record and gives the money back to the invoices it covered, so
@@ -102,18 +103,6 @@ class PaymentsController extends StateNotifier<List<Payment>> {
 final paymentsProvider =
     StateNotifierProvider<PaymentsController, List<Payment>>((ref) {
   return PaymentsController(ref.watch(localStoreProvider), ref);
-});
-
-/// Turns any hand-typed paid amount that has no payment record into one, and
-/// keeps doing so on every load so nothing is ever left unexplained. Runs at
-/// start-up, before the payments page is opened.
-final paymentSyncProvider = FutureProvider<void>((ref) async {
-  await ref.watch(invoicesProvider.notifier).ready;
-  final invoices = ref.read(invoicesProvider);
-  final existing = ref.read(paymentsProvider);
-  final missing = legacyPaymentsFor(invoices, existing);
-  if (missing.isEmpty) return;
-  await ref.read(paymentsProvider.notifier).addMany(missing);
 });
 
 /// What the payments page shows per supplier: how much has been paid, and how
