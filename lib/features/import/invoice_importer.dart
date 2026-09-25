@@ -141,6 +141,7 @@ const _fields = <ImportField, _FieldInfo>{
       'item name',
       'product name',
       'description of goods',
+      'description',
       'medicine',
       'product',
       'item',
@@ -199,6 +200,9 @@ extension ImportFieldInfo on ImportField {
         if (0.6 > best) best = 0.6;
       }
     }
+    // A hand-kept ledger writes the item names under a "Description" heading,
+    // so on a tie the item name wins over the invoice-level description.
+    if (_fields[this]!.isLineItem) best += 0.05;
     return best;
   }
 }
