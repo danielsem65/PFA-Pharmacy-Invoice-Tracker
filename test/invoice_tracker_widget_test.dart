@@ -473,17 +473,20 @@ void main() {
       expect(find.text('No invoices yet'), findsOneWidget);
     });
 
-    testWidgets('the whole quick-add bar opens a new invoice', (tester) async {
+    // The invoice form covers the whole window, sidebar and all, so each end
+    // of the bar gets its own run from the invoice list.
+    testWidgets('the left end of the quick-add bar opens a new invoice',
+        (tester) async {
       await pumpApp(tester, InMemoryLocalStore());
 
-      // Left of the label, over the gradient: the part that used to be dead.
       await tapIconEnd(tester, 'New invoice');
       expect(find.text('New Invoice'), findsOneWidget);
+    });
 
-      await tapIconEnd(tester, 'Invoices');
-      expect(find.text('No invoices yet'), findsOneWidget);
+    testWidgets('the right end of the quick-add bar opens a new invoice',
+        (tester) async {
+      await pumpApp(tester, InMemoryLocalStore());
 
-      // And the right-hand end of the bar, for good measure.
       final box = tester.getRect(
         find.descendant(
           of: find.byType(AppSidebar),
