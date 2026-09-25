@@ -25,7 +25,6 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
   Widget build(BuildContext context) {
     final products = ref.watch(productsProvider);
     final invoices = ref.watch(invoicesProvider);
-    final scheme = Theme.of(context).colorScheme;
 
     final q = _query.trim().toLowerCase();
     final visible = products

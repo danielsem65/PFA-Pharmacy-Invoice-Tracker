@@ -24,7 +24,6 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
   Widget build(BuildContext context) {
     final suppliers = ref.watch(suppliersProvider);
     final invoices = ref.watch(invoicesProvider);
-    final scheme = Theme.of(context).colorScheme;
 
     int owedBy(Supplier s) {
       var total = 0;
