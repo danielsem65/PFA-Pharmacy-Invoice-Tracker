@@ -348,11 +348,6 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
       elevation: 10,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
-    menuTheme: MenuThemeData(
-      surfaceTintColor: Colors.transparent,
-      elevation: 10,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-    ),
     scrollbarTheme: ScrollbarThemeData(
       thumbVisibility: const WidgetStatePropertyAll(true),
       thickness: WidgetStatePropertyAll(8),
@@ -404,6 +399,19 @@ class SoftCardBorder extends OutlinedBorder {
       );
 
   @override
+  ShapeBorder copyWith({BorderSide? side, BorderRadius? borderRadius}) {
+    return SoftCardBorder(
+      radius: borderRadius?.topLeft.x ?? radius,
+      fill: fill,
+      side: side ?? this.side,
+      shadowColor: shadowColor,
+      shadowBlur: shadowBlur,
+      shadowSpread: shadowSpread,
+      shadowOffset: shadowOffset,
+    );
+  }
+
+  @override
   ShapeBorder scale(double t) => SoftCardBorder(
         radius: radius * t,
         fill: fill,
@@ -447,7 +455,7 @@ class SoftCardBorder extends OutlinedBorder {
       );
     }
     canvas.drawRRect(rrect, Paint()..color = fill);
-    if (side.isVisible) {
+    if (side.style != BorderStyle.none && side.width > 0) {
       canvas.drawRRect(rrect, side.toPaint());
     }
   }

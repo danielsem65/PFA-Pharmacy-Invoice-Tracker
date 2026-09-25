@@ -87,7 +87,7 @@ class _AuroraPainter extends CustomPainter {
 
   /// A stable pseudo-random number, so the same particles are in the same
   /// places every time the window is painted.
-  static double _noise(int salt, int i) {
+  double _noise(int salt, int i) {
     final x = math.sin(seed * 12.9898 + i * 78.233 + salt * 37.719) * 43758.5453;
     return x - x.floorToDouble();
   }
@@ -222,6 +222,142 @@ class _HoverLiftState extends State<HoverLift> {
       ),
     );
   }
+}
+
+/// A soft radial bloom, used behind headers and empty states.
+class SoftGlow extends StatelessWidget {
+  const SoftGlow({
+    super.key,
+    required this.child,
+    required this.color,
+    this.radius = 180,
+    this.opacity = 0.3,
+  });
+
+  final Widget child;
+  final Color color;
+  final double radius;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        Positioned(
+          top: -radius * 0.4,
+          right: -radius * 0.3,
+          child: IgnorePointer(
+            child: Container(
+              width: radius,
+              height: radius,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: <Color>[
+                    color.withValues(alpha: opacity),
+                    color.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        child,
+      ],
+    );
+  }
+}
+
+/// A drifting, shimmering dot field for hero areas. Bounded in time, so the
+/// window eventually holds still.
+class ParticleDrift extends StatefulWidget {
+  const ParticleDrift({
+    super.key,
+    required this.child,
+    this.count = 14,
+    this.color = Colors.white,
+  });
+
+  final Widget child;
+  final int count;
+  final Color color;
+
+  @override
+  State<ParticleDrift> createState() => _ParticleDriftState();
+}
+
+class _ParticleDriftState extends State<ParticleDrift>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _t = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2200),
+  )..forward();
+
+  @override
+  void dispose() {
+    _t.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        Positioned.fill(
+          child: IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _t,
+              builder: (context, _) => CustomPaint(
+                painter: _ParticlePainter(
+                  t: Curves.easeOut.transform(_t.value),
+                  count: widget.count,
+                  color: widget.color,
+                ),
+              ),
+            ),
+          ),
+        ),
+        widget.child,
+      ],
+    );
+  }
+}
+
+class _ParticlePainter extends CustomPainter {
+  _ParticlePainter({required this.t, required this.count, required this.color});
+
+  final double t;
+  final int count;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    for (var i = 0; i < count; i++) {
+      final seedA = math.sin(i * 12.9898) * 43758.5453;
+      final a = seedA - seedA.floorToDouble();
+      final seedB = math.sin(i * 78.233) * 43758.5453;
+      final b = seedB - seedB.floorToDouble();
+      final seedC = math.sin(i * 39.425) * 43758.5453;
+      final c = seedC - seedC.floorToDouble();
+
+      final dx = size.width * (a * 0.9 + 0.05 * t);
+      final dy = size.height * (b * 0.9 - 0.08 * t);
+      final r = 0.8 + 2.2 * c;
+      final opacity = (0.25 + 0.5 * c) *
+          (0.5 + 0.5 * math.sin(t * math.pi * 2 + i));
+      canvas.drawCircle(
+        Offset(dx, dy),
+        r,
+        Paint()..color = color.withValues(alpha: opacity.clamp(0.0, 1.0)),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ParticlePainter old) => old.t != t;
 }
 
 /// Fades and rises its child into place, optionally after a short wait, so a

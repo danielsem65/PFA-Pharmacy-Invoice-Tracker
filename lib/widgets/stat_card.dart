@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
+import 'aurora_background.dart';
 
 /// A number worth noticing: a coloured icon, a quiet label, the figure itself.
 class StatCard extends StatelessWidget {
