@@ -57,6 +57,15 @@ void main() {
       );
     });
 
+    test('leaves no empty sheet in front of the real ones', () {
+      final workbook = readXlsx(buildSampleWorkbook());
+      // A new workbook arrives with an empty Sheet1, which is of no use here.
+      expect(workbook.sheetNames, isNot(contains('Sheet1')));
+      expect(workbook.sheetNames, hasLength(5));
+      // The summary is the sheet the workbook opens on.
+      expect(workbook.sheetNames.first, 'Summary');
+    });
+
     test('writes money as numbers in cedis, not pesewas or text', () {
       final sheet = readXlsx(buildSampleWorkbook()).sheet('Invoices');
       final subtotal = headersOf(sheet, 0).indexOf('Subtotal (GH₵)');
