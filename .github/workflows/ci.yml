@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  analyze-test:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: stable
+          channel: stable
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test
+        run: flutter test
+
+  build-windows:
+    name: Build Windows & Publish Release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: stable
+          channel: stable
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Create Windows platform files
+        run: |
+          flutter create --platforms=windows --no-overwrite . --org com.pfa --project-name pfa_pharmacy_invoice_tracker
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Read version from pubspec
+        id: version
+        shell: pwsh
+        run: |
+          $line = (Select-String -Path pubspec.yaml -Pattern '^version:').Line
+          $ver = ($line -replace 'version:\s*', '').Trim()
+          $tag = "v" + ($ver -split '\+')[0]
+          Write-Output "version=$ver"
+          Write-Output "tag=$tag"
+          echo "APP_VERSION=$ver" >> $env:GITHUB_ENV
+          echo "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
+
+      - name: Package Windows build
+        shell: pwsh
+        run: |
+          $asset = "PFA-Pharmacy-Invoice-Tracker.zip"
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath $asset
+          echo "ASSET=$asset" >> $env:GITHUB_ENV
+
+      - name: Create rolling GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete "$env:RELEASE_TAG" --yes --cleanup-tag 2>$null
+          gh release create "$env:RELEASE_TAG" "$env:ASSET" `
+            --title "v$env:APP_VERSION" `
+            --notes "PFA Pharmacy Invoice Tracker $env:APP_VERSION — Windows build (x64). Download the ZIP, extract anywhere (not Program Files), and run PFA-Pharmacy-Invoice-Tracker.exe."

@@ -1,0 +1,30 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+**/android/.gradle
+**/android/app/.cxx
+.idea/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.xcworkspace
+.ClassLoader
+*.old.pubspec.lock
+
+# Local data (user-created app data must never be committed)
+*.zip
+*.csv
+test_data/
+
+# Misc
+.metadata
+*.log
+Thumbs.db
+Desktop.ini

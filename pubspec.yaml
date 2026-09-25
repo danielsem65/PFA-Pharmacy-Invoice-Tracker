@@ -1,0 +1,29 @@
+name: pfa_pharmacy_invoice_tracker
+description: "PFA Pharmacy Invoice Tracker: offline supplier invoice keeper for Windows — accounts payable, receipts, CSV export, ZIP backup, self-update."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.2.7
+  shared_preferences: ^2.3.0
+  path_provider: ^2.1.4
+  file_selector: ^1.0.3
+  archive: ^3.6.1
+  intl: ^0.19.0
+  http: ^1.2.0
+  package_info_plus: ^8.0.0
+  path: ^1.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
