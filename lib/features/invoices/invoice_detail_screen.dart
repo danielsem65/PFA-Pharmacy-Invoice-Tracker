@@ -347,8 +347,6 @@ class _AmountWordsCard extends StatelessWidget {
 
   final SupplierInvoice invoice;
 
-  final SupplierInvoice invoice;
-
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
