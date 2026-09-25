@@ -102,11 +102,11 @@ void main() {
         'Due Date,Tax %,Subtotal (GH₵),Total (GH₵),Paid (GH₵),Balance (GH₵),'
         'Status,Payment Method,Paid Date,Notes',
       );
-      expect(lines.last, contains('"INV-001, ""quoted"""'));
-      expect(lines.last, contains('"line1\nline2"'));
-      expect(lines.last, contains('"Company, Ltd."'));
-      expect(lines.last, contains('1234.56'));
-      expect(lines.last, contains('1358.02'));
+      expect(csv, contains('"INV-001, ""quoted"""'));
+      expect(csv, contains('"line1\nline2"'));
+      expect(csv, contains('"Company, Ltd."'));
+      expect(csv, contains('1234.56'));
+      expect(csv, contains('1358.02'));
     });
 
     test('suppliersCsv exports supplier rows', () {

@@ -47,6 +47,7 @@ class TestReceiptStorage extends ReceiptStorage {
   @override
   Future<String> saveReceiptFile(String sourcePath) async {
     final name = sanitizeName(sourcePath);
+    await Directory(root).create(recursive: true);
     await File(sourcePath).copy(_path(name));
     return name;
   }

@@ -12,6 +12,8 @@ void main() {
     WidgetTester tester,
     InMemoryLocalStore store,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -56,8 +58,8 @@ void main() {
 
       // Card label 'Overdue' + the overdue row's status cell.
       expect(find.text('Overdue'), findsNWidgets(2));
-      // Paid status appears once.
-      expect(find.text('Paid'), findsOneWidget);
+      // Column header 'Paid' + the paid row's status cell.
+      expect(find.text('Paid'), findsNWidgets(2));
 
       // Total owing card, overdue card and row totals/balances.
       expect(find.text('₵100.00'), findsNWidgets(4));
