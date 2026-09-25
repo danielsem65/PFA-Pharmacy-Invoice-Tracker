@@ -5,8 +5,12 @@ import '../../models/supplier_invoice.dart';
 
 class InvoicesController extends StateNotifier<List<SupplierInvoice>> {
   InvoicesController(this._store) : super(const []) {
-    _load();
+    ready = _load();
   }
+
+  /// Completes once the saved invoices are in memory, so anything that has to
+  /// reason about them can wait for them instead of guessing.
+  late final Future<void> ready;
 
   final LocalStore _store;
 

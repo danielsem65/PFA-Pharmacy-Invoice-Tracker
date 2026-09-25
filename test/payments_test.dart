@@ -51,7 +51,7 @@ void main() {
         ),
       );
 
-      await container.read(paymentsProvider.future);
+      await container.read(paymentsProvider.notifier).ready;
       await container.read(paymentsProvider.notifier).add(
             Payment(
               date: DateTime(2026, 4, 1),
@@ -82,7 +82,7 @@ void main() {
         ),
       );
 
-      await container.read(paymentsProvider.future);
+      await container.read(paymentsProvider.notifier).ready;
       await container.read(paymentsProvider.notifier).add(
             Payment(
               date: DateTime(2026, 4, 1),
@@ -111,7 +111,7 @@ void main() {
         ),
       );
 
-      await container.read(paymentsProvider.future);
+      await container.read(paymentsProvider.notifier).ready;
       await container.read(paymentSyncProvider.future);
       await container.read(paymentsProvider.notifier).add(
             Payment(
@@ -137,7 +137,7 @@ void main() {
         ),
       );
 
-      await container.read(paymentsProvider.future);
+      await container.read(paymentsProvider.notifier).ready;
       final notifier = container.read(paymentsProvider.notifier);
       await notifier.add(
         Payment(
@@ -167,7 +167,7 @@ void main() {
         ),
       );
 
-      await container.read(paymentsProvider.future);
+      await container.read(paymentsProvider.notifier).ready;
       await container.read(paymentsProvider.notifier).add(
             Payment(
               date: DateTime(2026, 4, 1),
@@ -195,7 +195,7 @@ void main() {
         ),
       );
 
-      await container.read(paymentsProvider.future);
+      await container.read(paymentsProvider.notifier).ready;
       await container.read(paymentsProvider.notifier).add(
             Payment(
               date: DateTime(2026, 4, 1),

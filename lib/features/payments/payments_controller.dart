@@ -7,8 +7,11 @@ import '../invoices/invoices_controller.dart';
 
 class PaymentsController extends StateNotifier<List<Payment>> {
   PaymentsController(this._store, this._ref) : super(const []) {
-    _load();
+    ready = _load();
   }
+
+  /// Completes once the saved payment records are in memory.
+  late final Future<void> ready;
 
   final LocalStore _store;
   final Ref _ref;
@@ -68,7 +71,8 @@ class PaymentsController extends StateNotifier<List<Payment>> {
     required int sign,
   }) async {
     if (allocationsByInvoice.isEmpty) return;
-    final invoices = await _ref.read(invoicesProvider.future);
+    await _ref.read(invoicesProvider.notifier).ready;
+    final invoices = _ref.read(invoicesProvider);
     if (invoices.isEmpty) return;
     final now = DateTime.now();
     final updated = [
@@ -104,8 +108,9 @@ final paymentsProvider =
 /// keeps doing so on every load so nothing is ever left unexplained. Runs at
 /// start-up, before the payments page is opened.
 final paymentSyncProvider = FutureProvider<void>((ref) async {
-  final invoices = await ref.watch(invoicesProvider.future);
-  final existing = ref.watch(paymentsProvider);
+  await ref.watch(invoicesProvider.notifier).ready;
+  final invoices = ref.read(invoicesProvider);
+  final existing = ref.read(paymentsProvider);
   final missing = legacyPaymentsFor(invoices, existing);
   if (missing.isEmpty) return;
   await ref.read(paymentsProvider.notifier).addMany(missing);
@@ -125,12 +130,13 @@ class SupplierPaymentTotals {
 
 final supplierPaymentTotalsProvider =
     Provider.family<SupplierPaymentTotals, String>((ref, supplierId) {
-  final invoices = ref
-      .watch(invoicesProvider)
-      .where((i) => i.supplierId == supplierId)
-      .toList();
-  final paid = invoices.fold(0, (sum, i) => sum + i.amountPaidPesewas);
-  final outstanding = invoices.fold(0, (sum, i) => sum + i.balancePesewas);
+  var paid = 0;
+  var outstanding = 0;
+  for (final inv in ref.watch(invoicesProvider)) {
+    if (inv.supplierId != supplierId) continue;
+    paid += inv.amountPaidPesewas;
+    outstanding += inv.balancePesewas;
+  }
   return SupplierPaymentTotals(
     paidPesewas: paid,
     outstandingPesewas: outstanding < 0 ? 0 : outstanding,
