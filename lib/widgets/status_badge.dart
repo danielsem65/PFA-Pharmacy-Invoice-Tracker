@@ -36,26 +36,29 @@ class StatusBadge extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: foreground,
-              shape: BoxShape.circle,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: foreground,
+                shape: BoxShape.circle,
+              ),
             ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            status.label,
-            style: Theme.of(context)
-                .textTheme
-                .labelMedium
-                ?.copyWith(color: foreground, fontWeight: FontWeight.w700),
-          ),
-        ],
+            const SizedBox(width: 6),
+            Text(
+              status.label,
+              style: Theme.of(context)
+                  .textTheme
+                  .labelMedium
+                  ?.copyWith(color: foreground, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
       ),
     );
   }

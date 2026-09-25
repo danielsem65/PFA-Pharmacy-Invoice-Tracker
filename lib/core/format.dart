@@ -89,6 +89,12 @@ String numberToWords(int n) {
     final text = _belowThousand(c);
     parts.add(_scales[i].isEmpty ? text : '$text ${_scales[i]}');
   }
+  // British convention: "...Thousand And Fifty" for a trailing <100 chunk.
+  final lastChunk = chunks.first;
+  if (parts.length >= 2 && lastChunk > 0 && lastChunk < 100) {
+    final idx = parts.length - 1;
+    parts[idx] = 'And ${parts[idx]}';
+  }
   return parts.join(' ');
 }
 

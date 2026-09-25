@@ -434,9 +434,9 @@ class _HeaderRow extends StatelessWidget {
         cell('Supplier', flex: 22),
         cell('Invoice No', flex: 13),
         cell('Due', flex: 10),
-        cell('Total', flex: 10, align: TextAlign.right),
-        cell('Paid', flex: 10, align: TextAlign.right),
-        cell('Balance', flex: 10, align: TextAlign.right),
+        cell('Total (GH₵)', flex: 10, align: TextAlign.right),
+        cell('Paid (GH₵)', flex: 10, align: TextAlign.right),
+        cell('Balance (GH₵)', flex: 10, align: TextAlign.right),
         cell('Status', flex: 12),
       ],
     );
