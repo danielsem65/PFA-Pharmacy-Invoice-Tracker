@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/format.dart';
 import '../../data/receipt_storage.dart';
-import '../../models/supplier_invoice.dart';
+import '../../models/supplier_inv.dart';
 import 'invoices_controller.dart';
 import '../suppliers/suppliers_controller.dart';
 
@@ -36,26 +36,28 @@ class InvoiceDetailScreen extends ConsumerWidget {
       );
     }
 
+    final inv = invoice;
+
     final supplierName = suppliers
-        .where((s) => s.id == invoice.supplierId)
+        .where((s) => s.id == inv.supplierId)
         .firstOrNull
         ?.name ?? 'Unknown supplier';
     final scheme = Theme.of(context).colorScheme;
-    final status = invoice.statusAt(now);
+    final status = inv.statusAt(now);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(invoice.invoiceNumber),
+        title: Text(inv.invoiceNumber),
         actions: [
           IconButton(
             tooltip: 'Edit',
             icon: const Icon(Icons.edit_outlined),
-            onPressed: () => context.go('/invoices/${invoice.id}/edit'),
+            onPressed: () => context.go('/invoices/${inv.id}/edit'),
           ),
           IconButton(
             tooltip: 'Delete',
             icon: const Icon(Icons.delete_outline),
-            onPressed: () => _confirmDelete(context, ref, invoice.id),
+            onPressed: () => _confirmDelete(context, ref, inv.id),
           ),
         ],
       ),
@@ -79,11 +81,11 @@ class InvoiceDetailScreen extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      formatPesewas(invoice.balancePesewas),
+                      formatPesewas(inv.balancePesewas),
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
                             fontWeight: FontWeight.w800,
-                            color: invoice.owesMoney
+                            color: inv.owesMoney
                                 ? scheme.error
                                 : scheme.primary,
                           ),
@@ -92,42 +94,42 @@ class InvoiceDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 _row(context, 'Supplier', supplierName),
-                _row(context, 'Invoice No', invoice.invoiceNumber),
-                if (invoice.reference.isNotEmpty)
-                  _row(context, 'Ref / PO', invoice.reference),
-                if (invoice.description.isNotEmpty)
-                  _row(context, 'Description', invoice.description),
+                _row(context, 'Invoice No', inv.invoiceNumber),
+                if (inv.reference.isNotEmpty)
+                  _row(context, 'Ref / PO', inv.reference),
+                if (inv.description.isNotEmpty)
+                  _row(context, 'Description', inv.description),
                 const Divider(height: 24),
-                _row(context, 'Invoice Date', formatDate(invoice.invoiceDate)),
-                _row(context, 'Received', formatDate(invoice.receivedDate)),
-                _row(context, 'Due', formatDate(invoice.dueDate)),
+                _row(context, 'Invoice Date', formatDate(inv.invoiceDate)),
+                _row(context, 'Received', formatDate(inv.receivedDate)),
+                _row(context, 'Due', formatDate(inv.dueDate)),
                 _row(context, 'Status', status.label),
                 const Divider(height: 24),
-                _row(context, 'Amount', formatPesewas(invoice.amountPesewas)),
-                if (invoice.taxRatePercent > 0)
+                _row(context, 'Amount', formatPesewas(inv.amountPesewas)),
+                if (inv.taxRatePercent > 0)
                   _row(
                     context,
-                    'Tax (${invoice.taxRatePercent}%)',
-                    formatPesewas(invoice.taxPesewas),
+                    'Tax (${inv.taxRatePercent}%)',
+                    formatPesewas(inv.taxPesewas),
                   ),
-                _row(context, 'Total', formatPesewas(invoice.totalPesewas)),
+                _row(context, 'Total', formatPesewas(inv.totalPesewas)),
                 _row(
                   context,
                   'Paid',
-                  formatPesewas(invoice.amountPaidPesewas),
+                  formatPesewas(inv.amountPaidPesewas),
                 ),
-                if (invoice.paidDate != null)
-                  _row(context, 'Paid Date', formatDate(invoice.paidDate!)),
-                _row(context, 'Payment method', invoice.paymentMethod),
-                _row(context, 'Balance', formatPesewas(invoice.balancePesewas)),
-                if (invoice.notes.isNotEmpty) ...[
+                if (inv.paidDate != null)
+                  _row(context, 'Paid Date', formatDate(inv.paidDate!)),
+                _row(context, 'Payment method', inv.paymentMethod),
+                _row(context, 'Balance', formatPesewas(inv.balancePesewas)),
+                if (inv.notes.isNotEmpty) ...[
                   const Divider(height: 24),
-                  _row(context, 'Notes', invoice.notes),
+                  _row(context, 'Notes', inv.notes),
                 ],
-                if (invoice.receipts.isNotEmpty) ...[
+                if (inv.receipts.isNotEmpty) ...[
                   const Divider(height: 24),
                   Text(
-                    'Receipts (${invoice.receipts.length})',
+                    'Receipts (${inv.receipts.length})',
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const SizedBox(height: 8),
@@ -135,11 +137,11 @@ class InvoiceDetailScreen extends ConsumerWidget {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      for (final name in invoice.receipts)
+                      for (final name in inv.receipts)
                         ActionChip(
                           avatar: const Icon(Icons.image_outlined, size: 18),
                           label: Text(_displayName(name)),
-                          onPressed: () => _openReceipt(context, ref, invoice.id),
+                          onPressed: () => _openReceipt(context, ref, inv.id),
                         ),
                     ],
                   ),

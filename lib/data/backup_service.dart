@@ -69,7 +69,7 @@ class BackupService {
     for (final name in receiptNames) {
       try {
         final bytes = await receipts.readReceipt(name);
-        archive.addFile(ArchiveFile('receipts/$name', bytes));
+        archive.addFile(ArchiveFile('receipts/$name', bytes.length, bytes));
       } catch (_) {
         // Skip missing receipt files.
       }

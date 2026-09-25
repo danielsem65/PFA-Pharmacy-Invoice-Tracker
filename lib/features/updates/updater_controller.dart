@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
@@ -103,9 +102,9 @@ class UpdaterController extends StateNotifier<UpdaterState> {
 
   Future<String> _currentNormalized() async {
     final v = _currentVersion ??
-        _defaultVersion.isEmpty
+        (_defaultVersion.isEmpty
             ? (await PackageInfo.fromPlatform()).version
-            : _defaultVersion;
+            : _defaultVersion);
     _currentVersion = v;
     return UpdateService.normalizeVersion(v);
   }
@@ -165,7 +164,7 @@ class UpdaterController extends StateNotifier<UpdaterState> {
       state = UpdaterState(phase: UpdaterPhase.applying,
           version: info.latestVersion);
       await Future<void>.delayed(const Duration(milliseconds: 1200));
-      await FlutterApp.exit(0);
+      exit(0);
     } catch (e) {
       state = UpdaterState(
         phase: UpdaterPhase.error,

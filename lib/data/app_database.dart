@@ -1,9 +1,14 @@
 import 'dart:convert';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/supplier.dart';
 import '../models/supplier_invoice.dart';
+
+final localStoreProvider = Provider<LocalStore>((ref) {
+  return SharedPrefsLocalStore(SharedPreferencesAsync());
+});
 
 abstract class LocalStore {
   Future<List<Supplier>> loadSuppliers();

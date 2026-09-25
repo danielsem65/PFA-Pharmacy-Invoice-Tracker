@@ -1,12 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/app_database.dart';
 import '../../models/supplier.dart';
-
-final localStoreProvider = Provider<LocalStore>((ref) {
-  return SharedPrefsLocalStore(SharedPreferencesAsync());
-});
 
 class SuppliersController extends StateNotifier<List<Supplier>> {
   SuppliersController(this._store) : super(const []) {

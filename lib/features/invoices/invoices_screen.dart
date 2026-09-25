@@ -184,9 +184,12 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
   Color? _rowColor(BuildContext context, SupplierInvoice inv, DateTime now) {
     if (!inv.owesMoney) return null;
     if (inv.statusAt(now) == InvoiceStatus.overdue) {
-      return Theme.of(context).colorScheme.errorContainer.withOpacity(0.5);
+      return Theme.of(context)
+          .colorScheme
+          .errorContainer
+          .withValues(alpha: 0.5);
     }
-    return Colors.amber.withOpacity(0.18);
+    return Colors.amber.withValues(alpha: 0.18);
   }
 }
 
