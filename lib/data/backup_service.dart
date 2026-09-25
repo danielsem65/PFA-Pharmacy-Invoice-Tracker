@@ -176,6 +176,7 @@ class BackupService {
       'Payment Method',
       'Paid Date',
       'Notes',
+      'Items',
     ]));
     for (final inv in invoices) {
       buf.writeln(_row([
@@ -195,6 +196,7 @@ class BackupService {
         inv.paymentMethod,
         inv.paidDate == null ? '' : _date(inv.paidDate!),
         inv.notes,
+        inv.lines.isEmpty ? '' : _items(inv.lines),
       ]));
     }
     return buf.toString();
@@ -213,6 +215,11 @@ class BackupService {
 String _date(DateTime d) => DateFormat('dd/MM/yyyy').format(d);
 String _num(double v) => v.toStringAsFixed(2).replaceFirst(RegExp(r'\.00$'), '');
 String _pesewas(int v) => (v / 100).toStringAsFixed(2);
+
+String _items(List<InvoiceLine> lines) => lines
+    .map((l) =>
+        '${l.name}: ${l.boxes} x ${l.piecesPerBox} @ ${_pesewas(l.pricePerBoxPesewas)} = ${_pesewas(l.totalPesewas)}')
+    .join('; ');
 
 String _row(List<String> cells) => cells.map(_field).join(',');
 

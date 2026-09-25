@@ -17,6 +17,49 @@ enum InvoiceStatus {
   final String label;
 }
 
+/// A single product line on an invoice.
+///
+/// In wholesale, medicines arrive in boxes. Each line records how many boxes
+/// were bought, how many items are inside each box, and the price per box.
+/// Loose (unboxed) items are entered as 1 item per box with the unit price.
+class InvoiceLine {
+  InvoiceLine({
+    required this.name,
+    this.boxes = 1,
+    this.piecesPerBox = 1,
+    required this.pricePerBoxPesewas,
+  });
+
+  factory InvoiceLine.fromJson(Map<String, dynamic> json) {
+    return InvoiceLine(
+      name: (json['name'] as String?) ?? '',
+      boxes: (json['boxes'] as int?) ?? 1,
+      piecesPerBox: (json['piecesPerBox'] as int?) ?? 1,
+      pricePerBoxPesewas: (json['pricePerBoxPesewas'] as int?) ?? 0,
+    );
+  }
+
+  final String name;
+  final int boxes;
+  final int piecesPerBox;
+  final int pricePerBoxPesewas;
+
+  /// Total number of items bought (boxes multiplied by items per box).
+  int get pieceCount => boxes * piecesPerBox;
+
+  /// Cost of this line (boxes multiplied by price per box).
+  int get totalPesewas => boxes * pricePerBoxPesewas;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'boxes': boxes,
+      'piecesPerBox': piecesPerBox,
+      'pricePerBoxPesewas': pricePerBoxPesewas,
+    };
+  }
+}
+
 class SupplierInvoice {
   SupplierInvoice({
     required this.id,
@@ -34,6 +77,7 @@ class SupplierInvoice {
     this.paymentMethod = 'Cash',
     this.notes = '',
     this.receipts = const [],
+    this.lines = const [],
   });
 
   factory SupplierInvoice.create({
@@ -51,6 +95,7 @@ class SupplierInvoice {
     String paymentMethod = 'Cash',
     String notes = '',
     List<String> receipts = const [],
+    List<InvoiceLine> lines = const [],
   }) {
     return SupplierInvoice(
       id: 'i_${DateTime.now().microsecondsSinceEpoch}',
@@ -68,6 +113,7 @@ class SupplierInvoice {
       paymentMethod: paymentMethod,
       notes: notes,
       receipts: receipts,
+      lines: lines,
     );
   }
 
@@ -86,11 +132,16 @@ class SupplierInvoice {
   final String paymentMethod;
   final String notes;
   final List<String> receipts;
+  final List<InvoiceLine> lines;
 
   int get taxPesewas => (amountPesewas * taxRatePercent / 100).round();
   int get totalPesewas => amountPesewas + taxPesewas;
   int get balancePesewas => totalPesewas - amountPaidPesewas;
   bool get owesMoney => balancePesewas > 0;
+
+  /// Sum of all product line totals (0 when the invoice has no lines).
+  int get lineItemsTotalPesewas =>
+      lines.fold(0, (sum, l) => sum + l.totalPesewas);
 
   InvoiceStatus statusAt(DateTime now) {
     if (balancePesewas <= 0) return InvoiceStatus.paid;
@@ -123,6 +174,7 @@ class SupplierInvoice {
     String? paymentMethod,
     String? notes,
     List<String>? receipts,
+    List<InvoiceLine>? lines,
   }) {
     return SupplierInvoice(
       id: id,
@@ -140,6 +192,7 @@ class SupplierInvoice {
       paymentMethod: paymentMethod ?? this.paymentMethod,
       notes: notes ?? this.notes,
       receipts: receipts ?? this.receipts,
+      lines: lines ?? this.lines,
     );
   }
 
@@ -158,10 +211,11 @@ class SupplierInvoice {
       'description': description,
       'paidDate': paidDate?.toIso8601String(),
       'paymentMethod': paymentMethod,
-      'notes': notes,
-      'receipts': receipts,
-    };
-  }
+'notes': notes,
+        'receipts': receipts,
+        'lines': lines.map((l) => l.toJson()).toList(),
+      };
+    }
 
   factory SupplierInvoice.fromJson(Map<String, dynamic> json) {
     return SupplierInvoice(
@@ -185,6 +239,9 @@ class SupplierInvoice {
       notes: (json['notes'] as String?) ?? '',
       receipts: ((json['receipts'] as List?) ?? const [])
           .map((e) => e as String)
+          .toList(),
+      lines: ((json['lines'] as List?) ?? const [])
+          .map((e) => InvoiceLine.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
   }

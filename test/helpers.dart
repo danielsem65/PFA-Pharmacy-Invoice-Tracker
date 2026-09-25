@@ -94,6 +94,7 @@ SupplierInvoice invoice({
   String? description,
   String paymentMethod = 'Cash',
   List<String> receipts = const [],
+  List<InvoiceLine> lines = const [],
 }) {
   return SupplierInvoice(
     id: id,
@@ -110,5 +111,6 @@ SupplierInvoice invoice({
     description: description ?? '',
     paymentMethod: paymentMethod,
     receipts: receipts,
+    lines: lines,
   );
 }

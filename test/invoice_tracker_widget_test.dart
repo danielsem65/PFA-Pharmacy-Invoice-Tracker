@@ -136,6 +136,59 @@ void main() {
       expect(find.text('INV-010'), findsOneWidget);
     });
 
+    testWidgets('adds an invoice with product lines', (tester) async {
+      final store = InMemoryLocalStore(
+        suppliers: [supplier('s1', 'Pharma Co')],
+      );
+      await pumpApp(tester, store);
+
+      await tester.tap(find.text('New Invoice'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Supplier'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Pharma Co');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Pharma Co').last);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Invoice No'),
+        'INV-020',
+      );
+
+      await tester.tap(find.text('Add item'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Product name'),
+        'Panadol',
+      );
+      await tester.enterText(find.widgetWithText(TextFormField, 'Boxes'), '2');
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Pieces per box'),
+        '24',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Price per box (GH₵)'),
+        '55',
+      );
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final saved = store.invoices.single;
+      expect(saved.invoiceNumber, 'INV-020');
+      expect(saved.lines, hasLength(1));
+      expect(saved.lines.single.name, 'Panadol');
+      expect(saved.lines.single.boxes, 2);
+      expect(saved.lines.single.piecesPerBox, 24);
+      expect(saved.lines.single.pricePerBoxPesewas, 5500);
+      expect(saved.lines.single.pieceCount, 48);
+      expect(saved.amountPesewas, 11000);
+      expect(find.text('INV-020'), findsOneWidget);
+    });
+
     testWidgets('form blocks saving without a supplier', (tester) async {
       final store = InMemoryLocalStore(suppliers: [supplier('s1', 'Pharma Co')]);
       await pumpApp(tester, store);

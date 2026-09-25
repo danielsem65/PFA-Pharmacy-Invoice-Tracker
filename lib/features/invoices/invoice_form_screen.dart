@@ -10,6 +10,30 @@ import '../../models/supplier_invoice.dart';
 import '../invoices/invoices_controller.dart';
 import '../suppliers/suppliers_controller.dart';
 
+class _LineDraft {
+  _LineDraft([InvoiceLine? line])
+      : name = TextEditingController(text: line?.name ?? ''),
+        boxes = TextEditingController(text: line == null ? '1' : '${line.boxes}'),
+        piecesPerBox = TextEditingController(
+            text: line == null ? '1' : '${line.piecesPerBox}'),
+        pricePerBox = TextEditingController(
+            text: line == null
+                ? ''
+                : (line.pricePerBoxPesewas / 100).toStringAsFixed(2));
+
+  final TextEditingController name;
+  final TextEditingController boxes;
+  final TextEditingController piecesPerBox;
+  final TextEditingController pricePerBox;
+
+  void dispose() {
+    name.dispose();
+    boxes.dispose();
+    piecesPerBox.dispose();
+    pricePerBox.dispose();
+  }
+}
+
 class InvoiceFormScreen extends ConsumerStatefulWidget {
   const InvoiceFormScreen({super.key, this.invoiceId});
 
@@ -39,8 +63,20 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
   DateTime _paidDate = dateOnly(DateTime.now());
   String _paymentMethod = 'Cash';
   final List<String> _receipts = [];
+  final List<_LineDraft> _lineDrafts = [];
 
   bool get _isEditing => widget.invoiceId != null;
+  bool get _hasLines => _lineDrafts.isNotEmpty;
+
+  int get _computedSubtotal {
+    var total = 0;
+    for (final d in _lineDrafts) {
+      final boxes = int.tryParse(d.boxes.text.trim()) ?? 0;
+      final price = _parseMoney(d.pricePerBox.text) ?? 0;
+      total += boxes * price;
+    }
+    return total;
+  }
 
   @override
   void initState() {
@@ -79,6 +115,10 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
             ? e.taxRatePercent.round().toString()
             : e.taxRatePercent.toString();
         _paid.text = (e.amountPaidPesewas / 100).toStringAsFixed(2);
+        if (e.lines.isNotEmpty) {
+          _lineDrafts.addAll(e.lines.map((l) => _LineDraft(l)));
+          _amount.text = (e.lineItemsTotalPesewas / 100).toStringAsFixed(2);
+        }
       }
     }
   }
@@ -93,6 +133,9 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
     _paid.dispose();
     _notes.dispose();
     _searchController.dispose();
+    for (final d in _lineDrafts) {
+      d.dispose();
+    }
     super.dispose();
   }
 
@@ -199,6 +242,36 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
     }
   }
 
+  void _addLine() {
+    setState(() {
+      _lineDrafts.add(_LineDraft());
+      _refreshAmount();
+    });
+  }
+
+  void _removeLine(int index) {
+    setState(() {
+      _lineDrafts.removeAt(index).dispose();
+      _refreshAmount();
+    });
+  }
+
+  void _refreshAmount() {
+    if (_hasLines) {
+      _amount.text = (_computedSubtotal / 100).toStringAsFixed(2);
+    }
+  }
+
+  String _lineSummary(_LineDraft d) {
+    final boxes = int.tryParse(d.boxes.text.trim()) ?? 0;
+    final pieces = int.tryParse(d.piecesPerBox.text.trim()) ?? 0;
+    final price = _parseMoney(d.pricePerBox.text) ?? 0;
+    if (boxes <= 0 || pieces <= 0 || price <= 0) return '—';
+    final items = boxes * pieces;
+    return '$boxes ${boxes == 1 ? 'box' : 'boxes'} × $pieces/box = '
+        '$items items · ${formatPesewas(boxes * price)}';
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_supplierId == null) {
@@ -208,8 +281,45 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
       return;
     }
     final paidAmount = _parseMoney(_paid.text) ?? 0;
-    final amount = _parseMoney(_amount.text) ?? 0;
+    final amount = _hasLines ? _computedSubtotal : (_parseMoney(_amount.text) ?? 0);
     final tax = _parsePercent(_taxRate.text);
+
+    var invoiceLines = const <InvoiceLine>[];
+    if (_hasLines) {
+      final lines = <InvoiceLine>[];
+      for (final d in _lineDrafts) {
+        final name = d.name.text.trim();
+        final boxes = int.tryParse(d.boxes.text.trim());
+        final pieces = int.tryParse(d.piecesPerBox.text.trim());
+        final price = _parseMoney(d.pricePerBox.text);
+        if (name.isEmpty ||
+            boxes == null ||
+            boxes <= 0 ||
+            pieces == null ||
+            pieces <= 0 ||
+            price == null ||
+            price <= 0) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(const SnackBar(
+              content: Text(
+                'Complete every product line — name, boxes, '
+                'pieces per box and price.',
+              ),
+            ));
+          return;
+        }
+        lines.add(
+          InvoiceLine(
+            name: name,
+            boxes: boxes,
+            piecesPerBox: pieces,
+            pricePerBoxPesewas: price,
+          ),
+        );
+      }
+      invoiceLines = lines;
+    }
 
     final invoice = _existing == null
         ? SupplierInvoice.create(
@@ -227,6 +337,7 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
             paymentMethod: _paymentMethod,
             notes: _notes.text.trim(),
             receipts: List.of(_receipts),
+            lines: invoiceLines,
           )
         : _existing!.copyWith(
             supplierId: _supplierId!,
@@ -244,6 +355,7 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
             paymentMethod: _paymentMethod,
             notes: _notes.text.trim(),
             receipts: List.of(_receipts),
+            lines: invoiceLines,
           );
 
     await ref.read(invoicesProvider.notifier).upsert(invoice);
@@ -394,6 +506,8 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
                       labelText: 'Description',
                     ),
                   ),
+                  const SizedBox(height: 18),
+                  _productsSection(),
                   const SizedBox(height: 12),
                   _dateField(
                     label: 'Invoice Date',
@@ -418,11 +532,14 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
                       Expanded(
                         child: TextFormField(
                           controller: _amount,
+                          readOnly: _hasLines,
                           keyboardType:
                               const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Amount (GH₵)',
                             prefixText: '₵ ',
+                            helperText:
+                                _hasLines ? 'Calculated from items' : null,
                           ),
                           validator: (v) {
                             final p = _parseMoney(v ?? '');
@@ -542,6 +659,144 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _productsSection() {
+    final texts = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Products / Items',
+                style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: _addLine,
+              icon: const Icon(Icons.add),
+              label: const Text('Add item'),
+            ),
+          ],
+        ),
+        if (_lineDrafts.isEmpty)
+          Text(
+            'Optional. Add each product you bought — e.g. 2 boxes × 24 pieces '
+            'at ₵55 per box. Leave empty to just type the Total below.',
+            style: texts.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        for (var i = 0; i < _lineDrafts.length; i++) ...[
+          const SizedBox(height: 8),
+          _lineCard(_lineDrafts[i], index: i),
+        ],
+      ],
+    );
+  }
+
+  Widget _lineCard(_LineDraft draft, {required int index}) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: draft.name,
+                  decoration: const InputDecoration(
+                    labelText: 'Product name',
+                    isDense: true,
+                  ),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Enter product name'
+                      : null,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Remove item',
+                onPressed: () => _removeLine(index),
+                icon: const Icon(Icons.delete_outline),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: draft.boxes,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Boxes',
+                    isDense: true,
+                  ),
+                  validator: (v) =>
+                      (int.tryParse((v ?? '').trim()) ?? 0) > 0
+                          ? null
+                          : 'At least 1',
+                  onChanged: (_) => setState(_refreshAmount),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  controller: draft.piecesPerBox,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Pieces per box',
+                    isDense: true,
+                  ),
+                  validator: (v) =>
+                      (int.tryParse((v ?? '').trim()) ?? 0) > 0
+                          ? null
+                          : 'At least 1',
+                  onChanged: (_) => setState(_refreshAmount),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  controller: draft.pricePerBox,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Price per box (GH₵)',
+                    isDense: true,
+                    prefixText: '₵ ',
+                  ),
+                  validator: (v) =>
+                      (_parseMoney((v ?? '').trim()) ?? 0) > 0
+                          ? null
+                          : 'Enter price',
+                  onChanged: (_) => setState(_refreshAmount),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              _lineSummary(draft),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
       ),
     );
   }

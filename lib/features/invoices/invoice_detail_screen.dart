@@ -81,6 +81,10 @@ class InvoiceDetailScreen extends ConsumerWidget {
                         _row(context, 'Ref / PO', inv.reference),
                       if (inv.description.isNotEmpty)
                         _row(context, 'Description', inv.description),
+                      if (inv.lines.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _ItemsCard(invoice: inv),
+                      ],
                       const Divider(height: 24),
                       _row(context, 'Invoice Date', formatDate(inv.invoiceDate)),
                       _row(context, 'Received', formatDate(inv.receivedDate)),
@@ -343,6 +347,8 @@ class _AmountWordsCard extends StatelessWidget {
 
   final SupplierInvoice invoice;
 
+  final SupplierInvoice invoice;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -462,5 +468,137 @@ class _ReceiptsCard extends StatelessWidget {
     final idx = stored.indexOf('_');
     if (idx == -1) return stored;
     return stored.substring(idx + 1).replaceAll('_', ' ');
+  }
+}
+
+class _ItemsCard extends StatelessWidget {
+  const _ItemsCard({required this.invoice});
+
+  final SupplierInvoice invoice;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final texts = Theme.of(context).textTheme;
+
+    Widget header(String label, {bool right = false}) => Text(
+          label,
+          textAlign: right ? TextAlign.right : TextAlign.left,
+          style: texts.labelSmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.4,
+          ),
+        );
+
+    Widget cell(
+      String text, {
+      bool right = false,
+      TextStyle? style,
+    }) => Text(
+      text,
+      textAlign: right ? TextAlign.right : TextAlign.left,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: style ?? texts.bodyMedium,
+    );
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Items (${invoice.lines.length})',
+            style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const Divider(height: 22),
+          Row(
+            children: [
+              Expanded(flex: 4, child: header('Product')),
+              Expanded(flex: 2, child: header('Qty', right: true)),
+              Expanded(flex: 2, child: header('Price/box', right: true)),
+              Expanded(flex: 2, child: header('Amount', right: true)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          for (final line in invoice.lines)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: cell(
+                      line.name,
+                      style: texts.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        cell('${line.boxes} × ${line.piecesPerBox}',
+                            right: true),
+                        cell(
+                          '${line.pieceCount} items',
+                          right: true,
+                          style: texts.labelSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: cell(
+                      '${formatPesewas(line.pricePerBoxPesewas)}/box',
+                      right: true,
+                      style: texts.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: cell(
+                      formatPesewas(line.totalPesewas),
+                      right: true,
+                      style: texts.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const Divider(height: 22),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Subtotal',
+                  style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              Text(
+                formatPesewas(invoice.lineItemsTotalPesewas),
+                style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

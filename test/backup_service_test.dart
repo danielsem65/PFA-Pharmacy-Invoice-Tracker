@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:pfa_pharmacy_invoice_tracker/data/backup_service.dart';
+import 'package:pfa_pharmacy_invoice_tracker/models/supplier_invoice.dart';
 
 import 'helpers.dart';
 
@@ -135,6 +136,14 @@ void main() {
             taxRatePercent: 10,
             description: 'line1\nline2',
             dueDate: DateTime(2001, 3, 5),
+            lines: [
+              InvoiceLine(
+                name: 'Panadol',
+                boxes: 2,
+                piecesPerBox: 24,
+                pricePerBoxPesewas: 5500,
+              ),
+            ],
           ),
         ],
         (_) => 'Company, Ltd.',
@@ -146,13 +155,14 @@ void main() {
         lines.first,
         'Supplier,Invoice No,Ref/PO,Description,Invoice Date,Received Date,'
         'Due Date,Tax %,Subtotal (GH₵),Total (GH₵),Paid (GH₵),Balance (GH₵),'
-        'Status,Payment Method,Paid Date,Notes',
+        'Status,Payment Method,Paid Date,Notes,Items',
       );
       expect(csv, contains('"INV-001, ""quoted"""'));
       expect(csv, contains('"line1\nline2"'));
       expect(csv, contains('"Company, Ltd."'));
       expect(csv, contains('1234.56'));
       expect(csv, contains('1358.02'));
+      expect(csv, contains('Panadol: 2 x 24 @ 55.00 = 110.00'));
     });
 
     test('suppliersCsv exports supplier rows', () {
