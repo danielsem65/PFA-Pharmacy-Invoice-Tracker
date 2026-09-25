@@ -37,6 +37,17 @@ class InvoicesController extends StateNotifier<List<SupplierInvoice>> {
     state = state.where((i) => !ids.contains(i.id)).toList();
     await _store.saveInvoices(state);
   }
+
+  /// Adds a batch in one write, used by the Excel import so a large sheet is
+  /// saved once instead of once per invoice.
+  Future<void> addMany(List<SupplierInvoice> invoices) async {
+    if (invoices.isEmpty) return;
+    final known = state.map((i) => i.id).toSet();
+    final fresh = invoices.where((i) => !known.contains(i.id)).toList();
+    if (fresh.isEmpty) return;
+    state = [...fresh, ...state];
+    await _store.saveInvoices(state);
+  }
 }
 
 final invoicesProvider =

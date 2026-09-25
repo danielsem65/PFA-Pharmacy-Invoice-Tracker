@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 
+import '../models/product.dart';
 import '../models/supplier.dart';
 import '../models/supplier_invoice.dart';
 import 'app_database.dart';
@@ -22,11 +23,13 @@ class BackupContent {
   BackupContent({
     required this.suppliers,
     required this.invoices,
+    required this.products,
     required this.receipts,
   });
 
   final List<Supplier> suppliers;
   final List<SupplierInvoice> invoices;
+  final List<Product> products;
   final Map<String, List<int>> receipts;
 }
 
@@ -41,6 +44,7 @@ class BackupService {
   Future<void> exportZip(String targetPath, {Set<String>? invoiceIds}) async {
     final allSuppliers = await store.loadSuppliers();
     final allInvoices = await store.loadInvoices();
+    final allProducts = await store.loadProducts();
 
     final withoutIds = invoiceIds == null;
     final invoices = invoiceIds == null
@@ -50,6 +54,16 @@ class BackupService {
     final suppliers = withoutIds
         ? allSuppliers
         : allSuppliers.where((s) => usedSupplierIds.contains(s.id)).toList();
+
+    // A partial export only needs the products its invoices actually reference,
+    // so the slice still restores on its own.
+    final usedProductNames =
+        invoices.expand((i) => i.lines).map((l) => l.name.trim().toLowerCase());
+    final products = withoutIds
+        ? allProducts
+        : allProducts
+            .where((p) => usedProductNames.contains(p.normalizedName))
+            .toList();
 
     final archive = Archive();
     archive.addFile(ArchiveFile.string(
@@ -61,13 +75,18 @@ class BackupService {
       jsonEncode(invoices.map((e) => e.toJson()).toList()),
     ));
     archive.addFile(ArchiveFile.string(
+      'products.json',
+      jsonEncode(products.map((e) => e.toJson()).toList()),
+    ));
+    archive.addFile(ArchiveFile.string(
       _manifestName,
       jsonEncode({
         'app': 'pfa_pharmacy_invoice_tracker',
-        'format': 1,
+        'format': 2,
         'exportedAt': DateTime.now().toIso8601String(),
         'suppliers': suppliers.length,
         'invoices': invoices.length,
+        'products': products.length,
       }),
     ));
 
@@ -129,6 +148,19 @@ class BackupService {
       );
     }
 
+    // Backups taken before the products feature have no products.json.
+    final productsRaw = readString('products.json');
+    var products = const <Product>[];
+    if (productsRaw != null) {
+      try {
+        products = (jsonDecode(productsRaw) as List<dynamic>)
+            .map((e) => Product.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (_) {
+        products = const <Product>[];
+      }
+    }
+
     final receiptsMap = <String, List<int>>{};
     for (final f in archive.files) {
       if (!f.isFile || !f.name.startsWith('receipts/')) continue;
@@ -141,6 +173,7 @@ class BackupService {
     return BackupContent(
       suppliers: suppliers,
       invoices: invoices,
+      products: products,
       receipts: receiptsMap,
     );
   }
@@ -149,6 +182,18 @@ class BackupService {
     final content = await readZip(sourcePath);
     await store.saveSuppliers(content.suppliers);
     await store.saveInvoices(content.invoices);
+    await store.saveProducts(content.products);
+
+    // Restore is a replace, not a merge: drop receipts that the backup does
+    // not contain so nothing stale survives.
+    for (final name in await receipts.listReceipts()) {
+      if (content.receipts.containsKey(name)) continue;
+      try {
+        await receipts.deleteReceiptFile(name);
+      } catch (_) {
+        // A locked file should not abort the whole restore.
+      }
+    }
     for (final entry in content.receipts.entries) {
       await receipts.writeReceipt(entry.key, entry.value);
     }
@@ -207,6 +252,25 @@ class BackupService {
     buf.writeln(_row(['Name', 'Phone', 'Location', 'Notes']));
     for (final s in suppliers) {
       buf.writeln(_row([s.name, s.phone, s.location, s.notes]));
+    }
+    return buf.toString();
+  }
+
+  String productsCsv(List<Product> products) {
+    final buf = StringBuffer('\uFEFF');
+    buf.writeln(_row([
+      'Product',
+      'Pieces per box',
+      'Price per box (GH₵)',
+      'Notes',
+    ]));
+    for (final p in products) {
+      buf.writeln(_row([
+        p.name,
+        '${p.piecesPerBox}',
+        _pesewas(p.pricePerBoxPesewas),
+        p.notes,
+      ]));
     }
     return buf.toString();
   }

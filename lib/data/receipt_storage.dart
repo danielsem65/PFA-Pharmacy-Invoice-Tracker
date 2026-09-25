@@ -24,12 +24,22 @@ class ReceiptStorage {
     return '$cleaned$ext';
   }
 
+  /// Builds the on-disk name a receipt will get. Callers can reserve a name
+  /// up front and only copy the file once the user actually saves.
+  String newReceiptName(String sourcePath) {
+    return '${DateTime.now().microsecondsSinceEpoch}_${sanitizeName(sourcePath)}';
+  }
+
   Future<String> saveReceiptFile(String sourcePath) async {
+    final stored = newReceiptName(sourcePath);
+    return copyReceiptAs(sourcePath, stored);
+  }
+
+  /// Copies [sourcePath] into the receipts folder under [storedName].
+  Future<String> copyReceiptAs(String sourcePath, String storedName) async {
     final dir = await _receiptsDir();
-    final stored =
-        '${DateTime.now().millisecondsSinceEpoch}_${sanitizeName(sourcePath)}';
-    await File(sourcePath).copy(p.join(dir.path, stored));
-    return stored;
+    await File(sourcePath).copy(p.join(dir.path, storedName));
+    return storedName;
   }
 
   Future<String> receiptPath(String storedName) async {
@@ -55,6 +65,17 @@ class ReceiptStorage {
     if (await File(path).exists()) {
       await File(path).delete();
     }
+  }
+
+  /// Every receipt currently on disk, by stored name.
+  Future<List<String>> listReceipts() async {
+    final dir = await _receiptsDir();
+    if (!await dir.exists()) return [];
+    final names = <String>[];
+    await for (final entity in dir.list()) {
+      if (entity is File) names.add(p.basename(entity.path));
+    }
+    return names;
   }
 
   Future<void> deleteAll() async {

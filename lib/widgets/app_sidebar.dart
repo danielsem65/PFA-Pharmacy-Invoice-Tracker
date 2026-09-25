@@ -98,6 +98,13 @@ class AppSidebar extends StatelessWidget {
               selected: index == 1,
               onTap: () => onSelect(1),
             ),
+            _SidebarItem(
+              icon: Icons.medication_outlined,
+              selectedIcon: Icons.medication_liquid,
+              label: 'Products',
+              selected: index == 2,
+              onTap: () => onSelect(2),
+            ),
             const Spacer(),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 20),

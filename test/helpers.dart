@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 
 import 'package:pfa_pharmacy_invoice_tracker/data/app_database.dart';
 import 'package:pfa_pharmacy_invoice_tracker/data/receipt_storage.dart';
+import 'package:pfa_pharmacy_invoice_tracker/models/product.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/supplier.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/supplier_invoice.dart';
 
@@ -11,17 +12,26 @@ class InMemoryLocalStore implements LocalStore {
   InMemoryLocalStore({
     List<Supplier>? suppliers,
     List<SupplierInvoice>? invoices,
+    List<Product>? products,
   })  : suppliers = suppliers ?? [],
-        invoices = invoices ?? [];
+        invoices = invoices ?? [],
+        products = products ?? [];
 
   List<Supplier> suppliers;
   List<SupplierInvoice> invoices;
+  List<Product> products;
+
+  @override
+  String? get loadWarning => null;
 
   @override
   Future<List<Supplier>> loadSuppliers() async => List.of(suppliers);
 
   @override
   Future<List<SupplierInvoice>> loadInvoices() async => List.of(invoices);
+
+  @override
+  Future<List<Product>> loadProducts() async => List.of(products);
 
   @override
   Future<void> saveSuppliers(List<Supplier> items) async {
@@ -31,6 +41,11 @@ class InMemoryLocalStore implements LocalStore {
   @override
   Future<void> saveInvoices(List<SupplierInvoice> items) async {
     invoices = List.of(items);
+  }
+
+  @override
+  Future<void> saveProducts(List<Product> items) async {
+    products = List.of(items);
   }
 }
 
@@ -50,6 +65,13 @@ class TestReceiptStorage extends ReceiptStorage {
     await Directory(root).create(recursive: true);
     await File(sourcePath).copy(_path(name));
     return name;
+  }
+
+  @override
+  Future<String> copyReceiptAs(String sourcePath, String storedName) async {
+    await Directory(root).create(recursive: true);
+    await File(sourcePath).copy(_path(storedName));
+    return storedName;
   }
 
   @override
@@ -73,6 +95,17 @@ class TestReceiptStorage extends ReceiptStorage {
   Future<void> deleteAll() async {
     final d = Directory(root);
     if (await d.exists()) await d.delete(recursive: true);
+  }
+
+  @override
+  Future<List<String>> listReceipts() async {
+    final d = Directory(root);
+    if (!await d.exists()) return <String>[];
+    return d
+        .listSync()
+        .whereType<File>()
+        .map((f) => p.basename(f.path))
+        .toList();
   }
 }
 
