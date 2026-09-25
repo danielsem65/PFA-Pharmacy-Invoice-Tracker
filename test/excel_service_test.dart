@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:archive/archive.dart';
 import 'package:excel/excel.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pfa_pharmacy_invoice_tracker/data/excel_service.dart';
@@ -68,27 +71,35 @@ void main() {
     });
 
     test('merges and centres the summary title across two columns', () {
-      final excel = Excel.decodeBytes(buildSampleWorkbook());
-      final sheet = excel.tables['Summary']!;
-      final title = sheet.cell(
-        CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
+      final bytes = buildSampleWorkbook();
+      // The summary is built first and the empty sheet is dropped, so it is the
+      // first sheet part in the book.
+      final sheet = worksheetXml(bytes, 'xl/worksheets/sheet1.xml');
+      expect(sheet, contains('<mergeCell ref="A1:B1"'));
+      expect(cellStyleXml(bytes, 'xl/worksheets/sheet1.xml', 'A1'),
+          contains('horizontal="center"'));
+
+      final summary = Excel.decodeBytes(bytes).tables['Summary']!;
+      expect(summary.spannedItems, contains('A1:B1'));
+      expect(
+        summary
+            .cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0))
+            .value
+            .toString(),
+        'PFA Pharmacy Invoice Tracker',
       );
-      expect(title.value.toString(), 'PFA Pharmacy Invoice Tracker');
-      expect(title.cellStyle?.horizontalAlignment, HorizontalAlign.Center);
-      expect(sheet.spannedItems, contains('A1:B1'));
     });
 
     test('right-aligns the money columns', () {
-      final excel = Excel.decodeBytes(buildSampleWorkbook());
-      final sheet = excel.tables['Invoices']!;
+      final bytes = buildSampleWorkbook();
       final subtotal = headersOf(
-        readXlsx(buildSampleWorkbook()).sheet('Invoices'),
+        readXlsx(bytes).sheet('Invoices'),
         0,
       ).indexOf('Subtotal (GH₵)');
-      final cell = sheet.cell(
-        CellIndex.indexByColumnRow(columnIndex: subtotal, rowIndex: 1),
+      expect(
+        cellStyleXml(bytes, 'xl/worksheets/sheet2.xml', getCellId(subtotal, 1)),
+        contains('horizontal="right"'),
       );
-      expect(cell.cellStyle?.horizontalAlignment, HorizontalAlign.Right);
     });
 
     test('writes money as numbers in cedis, not pesewas or text', () {
@@ -575,4 +586,30 @@ void main() {
       throwsA(isA<FormatException>()),
     );
   });
+}
+
+/// One part of the workbook as the XML Excel will actually read.
+///
+/// Styling has to be checked here rather than through [readXlsx]: the excel
+/// package writes alignment into the file, but its own reader hands every cell
+/// back with default alignment, so a decoded sheet cannot tell left from right.
+String worksheetXml(List<int> bytes, String part) {
+  final book = ZipDecoder().decodeBytes(bytes);
+  final file = book.findFile(part);
+  if (file == null) throw StateError('The workbook has no $part part.');
+  return utf8.decode(file.content as List<int>);
+}
+
+/// The style one cell points at, as XML: the `s` attribute of the cell is an
+/// index into the `<cellXfs>` list in the styles part.
+String cellStyleXml(List<int> bytes, String part, String cellId) {
+  final sheet = worksheetXml(bytes, part);
+  final cell = RegExp('<c r="$cellId" s="(\\d+)"').firstMatch(sheet);
+  if (cell == null) throw StateError('$part has no styled cell $cellId.');
+  final styles = worksheetXml(bytes, 'xl/styles.xml');
+  final block = RegExp('<cellXfs[^>]*>(.*?)</cellXfs>', dotAll: true)
+      .firstMatch(styles)
+      ?.group(1);
+  if (block == null) throw StateError('The workbook has no cell styles.');
+  return block.split('<xf ').skip(1).elementAt(int.parse(cell.group(1)!));
 }
