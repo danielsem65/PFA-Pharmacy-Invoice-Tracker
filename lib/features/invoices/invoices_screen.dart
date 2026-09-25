@@ -133,6 +133,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
             child: Row(
               children: [
                 Expanded(
+                  flex: 4,
                   child: TextField(
                     decoration: const InputDecoration(
                       hintText: 'Search invoices…',
@@ -143,73 +144,88 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .outlineVariant
-                          .withValues(alpha: 0.7),
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: DropdownButton<String?>(
-                    value: _filterSupplierId,
-                    hint: const Text('All suppliers'),
-                    underline: const SizedBox.shrink(),
-                    borderRadius: BorderRadius.circular(14),
-                    items: [
-                      const DropdownMenuItem<String?>(
-                        value: null,
-                        child: Text('All suppliers'),
-                      ),
-                      for (final Supplier s in suppliers)
-                        DropdownMenuItem<String?>(
-                          value: s.id,
-                          child: Text(s.name),
+                Flexible(
+                  flex: 1,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outlineVariant
+                              .withValues(alpha: 0.7),
                         ),
-                    ],
-                    onChanged: (v) => setState(() => _filterSupplierId = v),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: DropdownButton<String?>(
+                        value: _filterSupplierId,
+                        hint: const Text('All suppliers'),
+                        underline: const SizedBox.shrink(),
+                        borderRadius: BorderRadius.circular(14),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('All suppliers'),
+                          ),
+                          for (final Supplier s in suppliers)
+                            DropdownMenuItem<String?>(
+                              value: s.id,
+                              child: Text(s.name),
+                            ),
+                        ],
+                        onChanged: (v) =>
+                            setState(() => _filterSupplierId = v),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                Container(
-                  key: const Key('status-filter'),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .outlineVariant
-                          .withValues(alpha: 0.7),
+                Flexible(
+                  flex: 1,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      key: const Key('status-filter'),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outlineVariant
+                              .withValues(alpha: 0.7),
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: DropdownButton<_FilterStatus>(
+                        value: _filterStatus,
+                        underline: const SizedBox.shrink(),
+                        borderRadius: BorderRadius.circular(14),
+                        items: const [
+                          DropdownMenuItem<_FilterStatus>(
+                            value: _FilterStatus.all,
+                            child: Text('All statuses'),
+                          ),
+                          DropdownMenuItem<_FilterStatus>(
+                            value: _FilterStatus.outstanding,
+                            child: Text('Outstanding'),
+                          ),
+                          DropdownMenuItem<_FilterStatus>(
+                            value: _FilterStatus.overdue,
+                            child: Text('Overdue'),
+                          ),
+                          DropdownMenuItem<_FilterStatus>(
+                            value: _FilterStatus.paid,
+                            child: Text('Paid'),
+                          ),
+                        ],
+                        onChanged: (v) => setState(
+                            () => _filterStatus = v ?? _FilterStatus.all),
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: DropdownButton<_FilterStatus>(
-                    value: _filterStatus,
-                    underline: const SizedBox.shrink(),
-                    borderRadius: BorderRadius.circular(14),
-                    items: const [
-                      DropdownMenuItem<_FilterStatus>(
-                        value: _FilterStatus.all,
-                        child: Text('All statuses'),
-                      ),
-                      DropdownMenuItem<_FilterStatus>(
-                        value: _FilterStatus.outstanding,
-                        child: Text('Outstanding'),
-                      ),
-                      DropdownMenuItem<_FilterStatus>(
-                        value: _FilterStatus.overdue,
-                        child: Text('Overdue'),
-                      ),
-                      DropdownMenuItem<_FilterStatus>(
-                        value: _FilterStatus.paid,
-                        child: Text('Paid'),
-                      ),
-                    ],
-                    onChanged: (v) =>
-                        setState(() => _filterStatus = v ?? _FilterStatus.all),
                   ),
                 ),
                 const SizedBox(width: 8),
