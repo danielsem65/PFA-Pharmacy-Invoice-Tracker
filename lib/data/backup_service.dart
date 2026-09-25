@@ -43,9 +43,9 @@ class BackupService {
     final allInvoices = await store.loadInvoices();
 
     final withoutIds = invoiceIds == null;
-    final invoices = withoutIds
+    final invoices = invoiceIds == null
         ? allInvoices
-        : allInvoices.where((i) => invoiceIds!.contains(i.id)).toList();
+        : allInvoices.where((i) => invoiceIds.contains(i.id)).toList();
     final usedSupplierIds = invoices.map((i) => i.supplierId).toSet();
     final suppliers = withoutIds
         ? allSuppliers

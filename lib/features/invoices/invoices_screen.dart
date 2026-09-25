@@ -31,7 +31,6 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
   Widget build(BuildContext context) {
     final invoices = ref.watch(invoicesProvider);
     final suppliers = ref.watch(suppliersProvider);
-    final scheme = Theme.of(context).colorScheme;
 
     String nameOf(String supplierId) {
       for (final s in suppliers) {
@@ -264,7 +263,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
       }
     }
     await ref.read(invoicesProvider.notifier).removeMany(selectedIds);
-    if (!mounted) return;
+    if (!mounted || !context.mounted) return;
     setState(() {
       _selected.clear();
       _selectionMode = _selected.isNotEmpty;
