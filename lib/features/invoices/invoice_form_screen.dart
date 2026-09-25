@@ -5,9 +5,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/format.dart';
 import '../../data/receipt_storage.dart';
+import '../../models/product.dart';
 import '../../models/supplier.dart';
 import '../../models/supplier_invoice.dart';
+import '../../widgets/desktop_form.dart';
 import '../invoices/invoices_controller.dart';
+import '../products/products_controller.dart';
 import '../suppliers/suppliers_controller.dart';
 
 class _LineDraft {
@@ -164,7 +167,9 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
     final controller = ref.read(suppliersProvider.notifier);
     final phoneCtrl = TextEditingController();
     final locationCtrl = TextEditingController();
-    late String createdId;
+    // Left null when the dialog is cancelled, which is not an error: nothing
+    // was created, so there is nothing to select.
+    String? createdId;
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
@@ -207,7 +212,11 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
         ],
       ),
     );
-    final s = ref.read(suppliersProvider).where((x) => x.id == createdId).firstOrNull;
+    if (createdId == null) return;
+    final s = ref
+        .read(suppliersProvider)
+        .where((x) => x.id == createdId)
+        .firstOrNull;
     if (s != null && mounted) _selectSupplier(s);
   }
 
@@ -247,6 +256,32 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
       _lineDrafts.add(_LineDraft());
       _refreshAmount();
     });
+  }
+
+  /// Adds a line from a catalogue product instead of a typed one, carrying the
+  /// pack size and price across so only the quantity is left to fill in.
+  void _addLineFromProduct(Product product) {
+    final draft = _LineDraft()
+      ..name.text = product.name
+      ..piecesPerBox.text = '${product.piecesPerBox}'
+      ..pricePerBox.text = product.pricePerBoxPesewas > 0
+          ? (product.pricePerBoxPesewas / 100).toStringAsFixed(2)
+          : '';
+    setState(() {
+      _lineDrafts.add(draft);
+      _refreshAmount();
+    });
+  }
+
+  Future<void> _lookUpProduct() async {
+    final chosen = await showDialog<Product>(
+      context: context,
+      builder: (context) => _ProductLookupDialog(
+        products: ref.read(productsProvider),
+      ),
+    );
+    if (chosen == null || !mounted) return;
+    _addLineFromProduct(chosen);
   }
 
   void _removeLine(int index) {
@@ -398,10 +433,35 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
     );
   }
 
+  /// The line numbers in the order they are shown: newest first, so a line added
+  /// on this page is the one you see straight away. The drafts themselves stay
+  /// in the order they were entered, which is the order the saved invoice keeps.
+  List<int> get _newestFirst => [
+        for (var i = _lineDrafts.length - 1; i >= 0; i--) i,
+      ];
+
+  int get _liveSubtotal =>
+      _hasLines ? _computedSubtotal : (_parseMoney(_amount.text) ?? 0);
+
+  int get _liveTax {
+    final rate = _parsePercent(_taxRate.text) ?? 0;
+    return (_liveSubtotal * rate / 100).round();
+  }
+
+  int get _liveTotal => _liveSubtotal + _liveTax;
+
+  int get _livePaid => _parseMoney(_paid.text) ?? 0;
+
+  int _lineTotal(_LineDraft d) {
+    final boxes = int.tryParse(d.boxes.text.trim()) ?? 0;
+    final price = _parseMoney(d.pricePerBox.text) ?? 0;
+    return boxes * price;
+  }
+
   @override
   Widget build(BuildContext context) {
     final suppliers = ref.watch(suppliersProvider);
-    final hasPaid = (_parseMoney(_paid.text) ?? 0) > 0;
+    final hasPaid = _livePaid > 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -410,249 +470,53 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
+            constraints: const BoxConstraints(maxWidth: 1400),
             child: Form(
               key: _formKey,
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFF0B3B52),
-                          Color(0xFF0E7490),
-                          Color(0xFF0F9D77),
+                  _banner(),
+                  const SizedBox(height: 16),
+                  LayoutBuilder(
+                    builder: (context, box) {
+                      final main = <Widget>[
+                        _supplierSection(suppliers),
+                        _itemsSection(),
+                      ];
+                      final side = <Widget>[
+                        _datesSection(hasPaid),
+                        _amountsSection(hasPaid),
+                        _totalsPanel(),
+                        _notesSection(),
+                      ];
+                      if (box.maxWidth < 1040) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: withGaps([...main, ...side], 16),
+                        );
+                      }
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 7,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: withGaps(main, 16),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          SizedBox(
+                            width: 400,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: withGaps(side, 16),
+                            ),
+                          ),
                         ],
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0E7490)
-                              .withValues(alpha: 0.25),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.receipt_long_outlined,
-                          size: 34,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          _isEditing
-                              ? 'Update this invoice'
-                              : 'Record a new invoice',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                              ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Enter the details of the medicines you bought on credit.',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.8),
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _supplierPicker(suppliers),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _invoiceNo,
-                          decoration: const InputDecoration(
-                            labelText: 'Invoice No',
-                          ),
-                          validator: (v) => (v == null || v.trim().isEmpty)
-                              ? 'Enter the invoice number'
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _reference,
-                          decoration: const InputDecoration(
-                            labelText: 'Ref / PO No',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _description,
-                    decoration: const InputDecoration(
-                      labelText: 'Description',
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  _productsSection(),
-                  const SizedBox(height: 12),
-                  _dateField(
-                    label: 'Invoice Date',
-                    value: _invoiceDate,
-                    onPicked: (d) => setState(() => _invoiceDate = d),
-                  ),
-                  const SizedBox(height: 12),
-                  _dateField(
-                    label: 'Received Date',
-                    value: _receivedDate,
-                    onPicked: (d) => setState(() => _receivedDate = d),
-                  ),
-                  const SizedBox(height: 12),
-                  _dateField(
-                    label: 'Due Date',
-                    value: _dueDate,
-                    onPicked: (d) => setState(() => _dueDate = d),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _amount,
-                          readOnly: _hasLines,
-                          keyboardType:
-                              const TextInputType.numberWithOptions(decimal: true),
-                          decoration: InputDecoration(
-                            labelText: 'Amount (GH₵)',
-                            prefixText: '₵ ',
-                            helperText:
-                                _hasLines ? 'Calculated from items' : null,
-                          ),
-                          validator: (v) {
-                            final p = _parseMoney(v ?? '');
-                            if (p == null) return 'Enter a valid amount';
-                            if (p <= 0) return 'Amount must be more than 0';
-                            return null;
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _taxRate,
-                          keyboardType:
-                              const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
-                            labelText: 'Tax %',
-                          ),
-                          validator: (v) {
-                            final t = (v ?? '').trim();
-                            if (t.isEmpty || _parsePercent(t) != null) {
-                              return null;
-                            }
-                            return '0–100';
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _paid,
-                          keyboardType:
-                              const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
-                            labelText: 'Paid (GH₵)',
-                            prefixText: '₵ ',
-                          ),
-                          validator: (v) {
-                            final p = _parseMoney(v ?? '');
-                            if (p == null) return 'Enter a valid amount';
-                            return null;
-                          },
-                          onChanged: (_) => setState(() {}),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _paymentField(hasPaid),
-                      ),
-                    ],
-                  ),
-                  if (hasPaid) ...[
-                    const SizedBox(height: 12),
-                    _dateField(
-                      label: 'Paid Date',
-                      value: _paidDate,
-                      onPicked: (d) => setState(() => _paidDate = d),
-                    ),
-                  ],
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _notes,
-                    decoration: const InputDecoration(labelText: 'Notes'),
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 16),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: _pickReceipts,
-                      icon: const Icon(Icons.attach_file),
-                      label: const Text('Attach receipt / image'),
-                    ),
-                  ),
-                  if (_receipts.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final name in _receipts)
-                          InputChip(
-                            label: Text(_displayName(name)),
-                            onDeleted: () {
-                              final storage = ref.read(receiptStorageProvider);
-                              storage.deleteReceiptFile(name);
-                              setState(() => _receipts.remove(name));
-                            },
-                          ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => context.pop(),
-                          child: const Text('Cancel'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: _save,
-                          child: const Text('Save'),
-                        ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -660,144 +524,724 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
           ),
         ),
       ),
+      bottomNavigationBar: FormActionsBar(
+        onCancel: () => context.pop(),
+        onSave: _save,
+        saveLabel: 'Save',
+        leading: _footerSummary(),
+      ),
     );
   }
 
-  Widget _productsSection() {
+  Widget _banner() {
     final texts = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
-    return Column(
+    final mark = Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Icon(
+        Icons.receipt_long_outlined,
+        size: 30,
+        color: Colors.white,
+      ),
+    );
+    final words = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Products / Items',
-                style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+        Text(
+          _isEditing ? 'Update this invoice' : 'Record a new invoice',
+          style: texts.titleLarge?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Enter the medicines you bought on credit. Item lines are optional — '
+          'leave them empty and type a total instead.',
+          style: texts.bodySmall?.copyWith(
+            color: Colors.white.withValues(alpha: 0.85),
+            height: 1.35,
+          ),
+        ),
+      ],
+    );
+    final total = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'TOTAL',
+            style: texts.labelSmall?.copyWith(
+              color: Colors.white.withValues(alpha: 0.85),
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.4,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            formatPesewas(_liveTotal),
+            style: texts.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, box) {
+        final wide = box.maxWidth >= 760;
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF0B3B52),
+                Color(0xFF0E7490),
+                Color(0xFF0F9D77),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0E7490).withValues(alpha: 0.28),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: wide
+              ? Row(
+                  children: [
+                    mark,
+                    const SizedBox(width: 16),
+                    Expanded(child: words),
+                    const SizedBox(width: 16),
+                    total,
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        mark,
+                        const SizedBox(width: 14),
+                        Expanded(child: words),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    total,
+                  ],
+                ),
+        );
+      },
+    );
+  }
+
+  Widget _supplierSection(List<Supplier> suppliers) {
+    return FormSection(
+      title: 'Supplier & reference',
+      icon: Icons.local_shipping_outlined,
+      children: [
+        _supplierPicker(suppliers),
+        FieldRow(
+          fields: [
+            (
+              flex: 3,
+              child: TextFormField(
+                controller: _invoiceNo,
+                decoration: const InputDecoration(labelText: 'Invoice No'),
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Enter the invoice number'
+                    : null,
               ),
             ),
-            TextButton.icon(
-              onPressed: _addLine,
-              icon: const Icon(Icons.add),
-              label: const Text('Add item'),
+            (
+              flex: 3,
+              child: TextFormField(
+                controller: _reference,
+                decoration: const InputDecoration(labelText: 'Ref / PO No'),
+              ),
+            ),
+            (
+              flex: 4,
+              child: TextFormField(
+                controller: _description,
+                decoration: const InputDecoration(labelText: 'Description'),
+              ),
             ),
           ],
         ),
-        if (_lineDrafts.isEmpty)
-          Text(
-            'Optional. Add each product you bought — e.g. 2 boxes × 24 pieces '
-            'at ₵55 per box. Leave empty to just type the Total below.',
-            style: texts.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+      ],
+    );
+  }
+
+  Widget _itemsSection() {
+    return FormSection(
+      title: 'Products / items',
+      icon: Icons.inventory_2_outlined,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton.filledTonal(
+            key: const Key('lookup-product'),
+            tooltip: 'Look up a product',
+            onPressed: _lookUpProduct,
+            icon: const Icon(Icons.travel_explore, size: 20),
           ),
-        for (var i = 0; i < _lineDrafts.length; i++) ...[
-          const SizedBox(height: 8),
-          _lineCard(_lineDrafts[i], index: i),
+          const SizedBox(width: 8),
+          FilledButton.tonalIcon(
+            onPressed: _addLine,
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Add item'),
+          ),
+        ],
+      ),
+      children: [
+        if (_lineDrafts.isEmpty)
+          const FormHint(
+            text: 'Optional. Add every product you bought — e.g. 2 boxes × 24 '
+                'pieces at ₵55 per box. Leave it empty and type the total in the '
+                'amounts panel instead.',
+          )
+        else ...[
+          LayoutBuilder(
+            builder: (context, box) {
+              final wide = box.maxWidth >= _tableBreakpoint;
+              final rows = <Widget>[
+                if (wide) _lineHeaderRow(),
+                for (final i in _newestFirst) ...[
+                  const SizedBox(height: 8),
+                  _lineRow(_lineDrafts[i], i, wide: wide),
+                ],
+              ];
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: withGaps(rows, 8),
+              );
+            },
+          ),
+          const SizedBox(height: 4),
+          const FormHint(
+            icon: Icons.swap_vert,
+            text: 'Newest items are listed first while you are on this page. '
+                'Once saved, the invoice lists them in the order you entered '
+                'them.',
+          ),
         ],
       ],
     );
   }
 
-  Widget _lineCard(_LineDraft draft, {required int index}) {
+  static const _nameFlex = 5;
+  static const _boxesFlex = 2;
+  static const _piecesFlex = 2;
+  static const _priceFlex = 3;
+  static const _badgeWidth = 24.0;
+  static const _totalWidth = 110.0;
+  static const _deleteWidth = 36.0;
+  static const _gutter = 8.0;
+  static const _pad = 12.0;
+
+  /// The item line is laid out as a table only once the panel is wide enough for
+  /// the columns to be readable; below that it stacks like a card.
+  static const _tableBreakpoint = 860.0;
+
+  Widget _lineHeaderRow() {
     final scheme = Theme.of(context).colorScheme;
+    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: scheme.onSurfaceVariant,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.7,
+        );
+    Widget heading(String label, {int flex = 0, double width = 0, Alignment align = Alignment.centerLeft}) {
+      final text = Text(label, style: style, textAlign: TextAlign.left);
+      if (flex > 0) {
+        return Expanded(flex: flex, child: Align(alignment: align, child: text));
+      }
+      return SizedBox(width: width, child: Align(alignment: align, child: text));
+    }
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: _pad, vertical: 9),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+        color: scheme.primaryContainer.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          heading('ITEM', width: _badgeWidth),
+          const SizedBox(width: _gutter),
+          heading('PRODUCT', flex: _nameFlex),
+          const SizedBox(width: _gutter),
+          heading('BOXES', flex: _boxesFlex),
+          const SizedBox(width: _gutter),
+          heading('PCS/BOX', flex: _piecesFlex),
+          const SizedBox(width: _gutter),
+          heading('PRICE / BOX', flex: _priceFlex),
+          const SizedBox(width: _gutter),
+          heading('LINE TOTAL', width: _totalWidth, align: Alignment.centerRight),
+          const SizedBox(width: _gutter),
+          const SizedBox(width: _deleteWidth),
+        ],
+      ),
+    );
+  }
+
+  Widget _lineRow(_LineDraft draft, int index, {required bool wide}) {
+    final scheme = Theme.of(context).colorScheme;
+    final texts = Theme.of(context).textTheme;
+    final isNewest = index == _lineDrafts.length - 1;
+    final total = _lineTotal(draft);
+    final pieces = int.tryParse(draft.piecesPerBox.text.trim()) ?? 0;
+    final boxes = int.tryParse(draft.boxes.text.trim()) ?? 0;
+
+    final nameField = TextFormField(
+      controller: draft.name,
+      decoration: const InputDecoration(labelText: 'Product name', isDense: true),
+      validator: (v) =>
+          (v == null || v.trim().isEmpty) ? 'Enter product name' : null,
+    );
+    final boxesField = TextFormField(
+      controller: draft.boxes,
+      keyboardType: TextInputType.number,
+      decoration: const InputDecoration(labelText: 'Boxes', isDense: true),
+      validator: (v) =>
+          (int.tryParse((v ?? '').trim()) ?? 0) > 0 ? null : 'At least 1',
+      onChanged: (_) => setState(_refreshAmount),
+    );
+    final piecesField = TextFormField(
+      controller: draft.piecesPerBox,
+      keyboardType: TextInputType.number,
+      decoration: const InputDecoration(labelText: 'Pieces per box', isDense: true),
+      validator: (v) =>
+          (int.tryParse((v ?? '').trim()) ?? 0) > 0 ? null : 'At least 1',
+      onChanged: (_) => setState(_refreshAmount),
+    );
+    final priceField = TextFormField(
+      controller: draft.pricePerBox,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: const InputDecoration(
+        labelText: 'Price per box (GH₵)',
+        isDense: true,
+        prefixText: '₵ ',
+      ),
+      validator: (v) =>
+          (_parseMoney((v ?? '').trim()) ?? 0) > 0 ? null : 'Enter price',
+      onChanged: (_) => setState(_refreshAmount),
+    );
+    final remove = SizedBox(
+      width: _deleteWidth,
+      child: IconButton(
+        tooltip: 'Remove item',
+        padding: EdgeInsets.zero,
+        onPressed: () => _removeLine(index),
+        icon: const Icon(Icons.delete_outline, size: 20),
+      ),
+    );
+    final badge = Container(
+      width: _badgeWidth,
+      height: _badgeWidth,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: isNewest ? scheme.primary : scheme.surfaceContainerHighest,
+        shape: BoxShape.circle,
+      ),
+      child: isNewest
+          ? Icon(Icons.check, size: 15, color: scheme.onPrimary)
+          : Text(
+              '${_newestFirst.indexOf(index) + 1}',
+              style: texts.labelSmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+    );
+
+    final content = wide
+        ? Row(
             children: [
-              Expanded(
-                child: TextFormField(
-                  controller: draft.name,
-                  decoration: const InputDecoration(
-                    labelText: 'Product name',
-                    isDense: true,
-                  ),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'Enter product name'
-                      : null,
+              badge,
+              const SizedBox(width: _gutter),
+              Expanded(flex: _nameFlex, child: nameField),
+              const SizedBox(width: _gutter),
+              Expanded(flex: _boxesFlex, child: boxesField),
+              const SizedBox(width: _gutter),
+              Expanded(flex: _piecesFlex, child: piecesField),
+              const SizedBox(width: _gutter),
+              Expanded(flex: _priceFlex, child: priceField),
+              const SizedBox(width: _gutter),
+              SizedBox(
+                width: _totalWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      formatPesewas(total),
+                      style: texts.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: total > 0 ? scheme.onSurface : scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    if (boxes > 0 && pieces > 0)
+                      Text(
+                        '${boxes * pieces} items',
+                        style: texts.labelSmall
+                            ?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                  ],
                 ),
               ),
-              IconButton(
-                tooltip: 'Remove item',
-                onPressed: () => _removeLine(index),
-                icon: const Icon(Icons.delete_outline),
+              const SizedBox(width: _gutter),
+              remove,
+            ],
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  badge,
+                  const SizedBox(width: _gutter),
+                  Expanded(child: nameField),
+                  remove,
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(child: boxesField),
+                  const SizedBox(width: _gutter),
+                  Expanded(child: piecesField),
+                  const SizedBox(width: _gutter),
+                  Expanded(child: priceField),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Text(
+                    isNewest ? 'Just added' : _lineSummary(draft),
+                    style: texts.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    formatPesewas(total),
+                    style: texts.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
             ],
-          ),
-          const SizedBox(height: 8),
+          );
+
+    return Container(
+      padding: const EdgeInsets.all(_pad),
+      decoration: BoxDecoration(
+        color: isNewest
+            ? scheme.primaryContainer.withValues(alpha: 0.30)
+            : scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isNewest
+              ? scheme.primary.withValues(alpha: 0.45)
+              : scheme.outlineVariant.withValues(alpha: 0.6),
+        ),
+      ),
+      child: content,
+    );
+  }
+
+  Widget _datesSection(bool hasPaid) {
+    return FormSection(
+      title: 'Dates',
+      icon: Icons.event_outlined,
+      children: [
+        FieldRow(
+          fields: [
+            (
+              flex: 1,
+              child: _dateField(
+                label: 'Invoice Date',
+                value: _invoiceDate,
+                onPicked: (d) => setState(() => _invoiceDate = d),
+              ),
+            ),
+            (
+              flex: 1,
+              child: _dateField(
+                label: 'Received Date',
+                value: _receivedDate,
+                onPicked: (d) => setState(() => _receivedDate = d),
+              ),
+            ),
+          ],
+        ),
+        FieldRow(
+          fields: [
+            (
+              flex: 1,
+              child: _dateField(
+                label: 'Due Date',
+                value: _dueDate,
+                onPicked: (d) => setState(() => _dueDate = d),
+              ),
+            ),
+            if (hasPaid)
+              (
+                flex: 1,
+                child: _dateField(
+                  label: 'Paid Date',
+                  value: _paidDate,
+                  onPicked: (d) => setState(() => _paidDate = d),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _amountsSection(bool hasPaid) {
+    return FormSection(
+      title: 'Amounts',
+      icon: Icons.payments_outlined,
+      children: [
+        FieldRow(
+          fields: [
+            (
+              flex: 3,
+              child: TextFormField(
+                controller: _amount,
+                readOnly: _hasLines,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Amount (GH₵)',
+                  prefixText: '₵ ',
+                  helperText: _hasLines ? 'Calculated from items' : null,
+                ),
+                validator: (v) {
+                  final p = _parseMoney(v ?? '');
+                  if (p == null) return 'Enter a valid amount';
+                  if (p <= 0) return 'Amount must be more than 0';
+                  return null;
+                },
+              ),
+            ),
+            (
+              flex: 2,
+              child: TextFormField(
+                controller: _taxRate,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Tax %'),
+                validator: (v) {
+                  final t = (v ?? '').trim();
+                  if (t.isEmpty || _parsePercent(t) != null) return null;
+                  return '0–100';
+                },
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+          ],
+        ),
+        FieldRow(
+          fields: [
+            (
+              flex: 3,
+              child: TextFormField(
+                controller: _paid,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'Paid (GH₵)',
+                  prefixText: '₵ ',
+                ),
+                validator: (v) {
+                  final p = _parseMoney(v ?? '');
+                  if (p == null) return 'Enter a valid amount';
+                  return null;
+                },
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+            (flex: 2, child: _paymentField(hasPaid)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _totalsPanel() {
+    final scheme = Theme.of(context).colorScheme;
+    final texts = Theme.of(context).textTheme;
+    final tax = _liveTax;
+    final total = _liveTotal;
+    final paid = _livePaid;
+    final balance = total - paid;
+    final rate = _parsePercent(_taxRate.text) ?? 0;
+
+    Widget row(String label, String value, {bool strong = false, Color? color}) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: strong
+                    ? texts.bodyMedium?.copyWith(fontWeight: FontWeight.w800)
+                    : texts.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ),
+            Text(
+              value,
+              style: (strong
+                      ? texts.titleMedium
+                      : texts.bodyMedium)
+                  ?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: color ?? scheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            scheme.primaryContainer.withValues(alpha: 0.55),
+            scheme.tertiaryContainer.withValues(alpha: 0.45),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
             children: [
-              Expanded(
-                child: TextFormField(
-                  controller: draft.boxes,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Boxes',
-                    isDense: true,
-                  ),
-                  validator: (v) =>
-                      (int.tryParse((v ?? '').trim()) ?? 0) > 0
-                          ? null
-                          : 'At least 1',
-                  onChanged: (_) => setState(_refreshAmount),
-                ),
-              ),
+              Icon(Icons.calculate_outlined, size: 18, color: scheme.primary),
               const SizedBox(width: 8),
-              Expanded(
-                child: TextFormField(
-                  controller: draft.piecesPerBox,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Pieces per box',
-                    isDense: true,
-                  ),
-                  validator: (v) =>
-                      (int.tryParse((v ?? '').trim()) ?? 0) > 0
-                          ? null
-                          : 'At least 1',
-                  onChanged: (_) => setState(_refreshAmount),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextFormField(
-                  controller: draft.pricePerBox,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Price per box (GH₵)',
-                    isDense: true,
-                    prefixText: '₵ ',
-                  ),
-                  validator: (v) =>
-                      (_parseMoney((v ?? '').trim()) ?? 0) > 0
-                          ? null
-                          : 'Enter price',
-                  onChanged: (_) => setState(_refreshAmount),
-                ),
+              Text(
+                'Invoice total',
+                style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w800),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              _lineSummary(draft),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
+          row(_hasLines ? 'Items subtotal' : 'Amount', formatPesewas(_liveSubtotal)),
+          row('VAT (${_trimRate(rate)}%)', formatPesewas(tax)),
+          Divider(color: scheme.outlineVariant.withValues(alpha: 0.7)),
+          row('Total', formatPesewas(total), strong: true, color: scheme.primary),
+          row('Paid', formatPesewas(paid)),
+          row(
+            balance <= 0 ? 'Balance settled' : 'Balance due',
+            formatPesewas(balance),
+            strong: true,
+            color: balance <= 0 ? const Color(0xFF0F9D77) : scheme.error,
           ),
         ],
       ),
+    );
+  }
+
+  static String _trimRate(double rate) =>
+      rate == rate.roundToDouble() ? '${rate.round()}' : '$rate';
+
+  Widget _notesSection() {
+    return FormSection(
+      title: 'Notes & receipts',
+      icon: Icons.sticky_note_2_outlined,
+      children: [
+        TextFormField(
+          controller: _notes,
+          decoration: const InputDecoration(labelText: 'Notes'),
+          maxLines: 3,
+          minLines: 2,
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            onPressed: _pickReceipts,
+            icon: const Icon(Icons.attach_file),
+            label: const Text('Attach receipt / image'),
+          ),
+        ),
+        if (_receipts.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final name in _receipts)
+                InputChip(
+                  label: Text(_displayName(name)),
+                  onDeleted: () {
+                    final storage = ref.read(receiptStorageProvider);
+                    storage.deleteReceiptFile(name);
+                    setState(() => _receipts.remove(name));
+                  },
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _footerSummary() {
+    final scheme = Theme.of(context).colorScheme;
+    final count = _lineDrafts.length;
+    final words = count == 0
+        ? 'No item lines — the amount is typed in directly'
+        : '$count ${count == 1 ? 'item' : 'items'} · '
+            '${_hasLines ? 'total from items' : 'typed total'} '
+            '${formatPesewas(_liveTotal)}';
+    return Row(
+      children: [
+        Icon(
+          count == 0 ? Icons.receipt_outlined : Icons.inventory_2_outlined,
+          size: 18,
+          color: scheme.primary,
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            words,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -842,5 +1286,142 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
     final idx = stored.indexOf('_');
     if (idx == -1) return stored;
     return stored.substring(idx + 1).replaceAll('_', ' ');
+  }
+}
+
+/// Picks a product from the catalogue to drop onto an invoice line, so a name
+/// that is already on file never has to be typed again.
+class _ProductLookupDialog extends StatefulWidget {
+  const _ProductLookupDialog({required this.products});
+
+  final List<Product> products;
+
+  @override
+  State<_ProductLookupDialog> createState() => _ProductLookupDialogState();
+}
+
+class _ProductLookupDialogState extends State<_ProductLookupDialog> {
+  final _query = TextEditingController();
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final typed = _query.text.trim();
+    final needle = typed.toLowerCase();
+    final matches = needle.isEmpty
+        ? widget.products
+        : widget.products
+            .where((p) => p.normalizedName.contains(needle))
+            .toList();
+
+    Widget pick(Product product, {String? label, IconData? icon}) {
+      return ListTile(
+        leading: CircleAvatar(
+          backgroundColor: scheme.primaryContainer,
+          child: Icon(icon ?? Icons.medication_outlined,
+              size: 20, color: scheme.onPrimaryContainer),
+        ),
+        title: Text(label ?? product.name),
+        subtitle: Text([
+          '${product.piecesPerBox} per box',
+          if (product.pricePerBoxPesewas > 0)
+            formatPesewas(product.pricePerBoxPesewas),
+        ].join(' · ')),
+        onTap: () => Navigator.of(context).pop(product),
+      );
+    }
+
+    return AlertDialog(
+      title: Row(
+        children: [
+          Icon(Icons.travel_explore, color: scheme.primary),
+          const SizedBox(width: 10),
+          const Text('Look up a product'),
+        ],
+      ),
+      content: SizedBox(
+        width: 480,
+        height: 420,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _query,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Search products',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: typed.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Clear',
+                        icon: const Icon(Icons.close),
+                        onPressed: () => setState(_query.clear),
+                      ),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: widget.products.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          'No products in the catalogue yet. Type a name below '
+                          'and it will be used as typed — or build the catalogue '
+                          'on the Products page and pick from it here.',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ),
+                    )
+                  : ListView(
+                      children: [
+                        for (final p in matches) pick(p),
+                        // Nothing on file is not a dead end: the typed name can
+                        // still be used, it just is not remembered.
+                        if (matches.isEmpty && typed.isNotEmpty)
+                          pick(
+                            Product.create(typed),
+                            label: 'Use "$typed"',
+                            icon: Icons.add,
+                          ),
+                        if (widget.products.isNotEmpty &&
+                            matches.isEmpty &&
+                            typed.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
+                              'Nothing matches. Try part of the name.',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+      ],
+    );
   }
 }

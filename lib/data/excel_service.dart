@@ -149,12 +149,13 @@ List<int> buildWorkbookBytes({
   DateTime? exportedAt,
 }) {
   final excel = Excel.createExcel();
-  // The summary is built first so it is the sheet the workbook opens on.
-  _buildSummarySheet(excel, invoices, suppliers, products, exportedAt);
+  // The records come first and the summary closes the book, so the workbook
+  // opens on the invoices and the totals are the last thing to read.
   _buildInvoicesSheet(excel, invoices, supplierNameOf);
   _buildInvoiceItemsSheet(excel, invoices, supplierNameOf);
   _buildSuppliersSheet(excel, suppliers);
   _buildProductsSheet(excel, products);
+  _buildSummarySheet(excel, invoices, suppliers, products, exportedAt);
   // A new workbook starts with an empty sheet called Sheet1. It is of no use
   // here, so it goes rather than sitting empty in front of the real sheets.
   excel.delete('Sheet1');

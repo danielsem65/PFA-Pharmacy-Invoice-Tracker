@@ -66,23 +66,26 @@ void main() {
       // A new workbook arrives with an empty Sheet1, which is of no use here.
       expect(workbook.sheetNames, isNot(contains('Sheet1')));
       expect(workbook.sheetNames, hasLength(5));
-      // The summary is the sheet the workbook opens on.
-      expect(workbook.sheetNames.first, 'Summary');
+      // The records come first, so the workbook opens on the invoices, and the
+      // summary closes the book.
+      expect(workbook.sheetNames.first, 'Invoices');
+      expect(workbook.sheetNames.last, 'Summary');
     });
 
     test('merges and centres the summary title across two columns', () {
       final bytes = buildSampleWorkbook();
-      // The summary is built first and the empty sheet is dropped, so it is the
-      // first sheet part in the book.
-      final sheet = worksheetXml(bytes, 'xl/worksheets/sheet1.xml');
+      final summary = worksheetPartFor(bytes, 'Summary');
+      final sheet = worksheetXml(bytes, summary);
       expect(sheet, contains('<mergeCell ref="A1:B1"'));
-      expect(cellStyleXml(bytes, 'xl/worksheets/sheet1.xml', 'A1'),
-          contains('horizontal="center"'));
-
-      final summary = Excel.decodeBytes(bytes).tables['Summary']!;
-      expect(summary.spannedItems, contains('A1:B1'));
       expect(
-        summary
+        cellStyleXml(bytes, summary, 'A1'),
+        contains('horizontal="center"'),
+      );
+
+      final decoded = Excel.decodeBytes(bytes).tables['Summary']!;
+      expect(decoded.spannedItems, contains('A1:B1'));
+      expect(
+        decoded
             .cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0))
             .value
             .toString(),
@@ -97,7 +100,11 @@ void main() {
         0,
       ).indexOf('Subtotal (GH₵)');
       expect(
-        cellStyleXml(bytes, 'xl/worksheets/sheet2.xml', getCellId(subtotal, 1)),
+        cellStyleXml(
+          bytes,
+          worksheetPartFor(bytes, 'Invoices'),
+          getCellId(subtotal, 1),
+        ),
         contains('horizontal="right"'),
       );
     });
@@ -598,6 +605,21 @@ String worksheetXml(List<int> bytes, String part) {
   final file = book.findFile(part);
   if (file == null) throw StateError('The workbook has no $part part.');
   return utf8.decode(file.content as List<int>);
+}
+
+/// The worksheet part a sheet name is stored in. It is read from the workbook's
+/// own sheet list and relationship file rather than assumed from the order the
+/// sheets happened to be built in.
+String worksheetPartFor(List<int> bytes, String sheetName) {
+  final book = worksheetXml(bytes, 'xl/workbook.xml');
+  final sheet =
+      RegExp('<sheet[^>]*name="$sheetName"[^>]*r:id="([^"]+)"').firstMatch(book);
+  if (sheet == null) throw StateError('The workbook has no $sheetName sheet.');
+  final rels = worksheetXml(bytes, 'xl/_rels/workbook.xml.rels');
+  final target =
+      RegExp('Id="${sheet.group(1)}"[^>]*Target="([^"]+)"').firstMatch(rels);
+  if (target == null) throw StateError('No part is linked to $sheetName.');
+  return 'xl/${target.group(1)}';
 }
 
 /// The style one cell points at, as XML: the `s` attribute of the cell is an

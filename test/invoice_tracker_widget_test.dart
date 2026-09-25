@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pfa_pharmacy_invoice_tracker/app.dart';
 import 'package:pfa_pharmacy_invoice_tracker/data/app_database.dart';
+import 'package:pfa_pharmacy_invoice_tracker/models/product.dart';
 
 import 'helpers.dart';
 
@@ -274,6 +275,112 @@ void main() {
 
       expect(find.text('Select a supplier first.'), findsOneWidget);
       expect(store.invoices, isEmpty);
+    });
+
+    testWidgets('a product is looked up instead of typed', (tester) async {
+      final store = InMemoryLocalStore(
+        suppliers: [supplier('s1', 'Pharma Co')],
+        products: [
+          Product.create(
+            'Panadol Extra',
+            piecesPerBox: 24,
+            pricePerBoxPesewas: 5500,
+          ),
+        ],
+      );
+      await pumpApp(tester, store);
+
+      await tester.tap(find.text('New Invoice'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('lookup-product')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Look up a product'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).last, 'Panadol');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Panadol Extra'));
+      await tester.pumpAndSettle();
+
+      // The line arrives filled in from the catalogue, ready for a quantity.
+      final names = tester
+          .widgetList<TextFormField>(
+            find.widgetWithText(TextFormField, 'Product name'),
+          )
+          .map((f) => f.controller?.text)
+          .toList();
+      expect(names, ['Panadol Extra']);
+      final pieces = tester
+          .widgetList<TextFormField>(
+            find.widgetWithText(TextFormField, 'Pieces per box'),
+          )
+          .map((f) => f.controller?.text)
+          .toList();
+      expect(pieces, ['24']);
+      final prices = tester
+          .widgetList<TextFormField>(
+            find.widgetWithText(TextFormField, 'Price per box (GH₵)'),
+          )
+          .map((f) => f.controller?.text)
+          .toList();
+      expect(prices, ['55.00']);
+    });
+
+    testWidgets('newest line shows first but is saved in entry order', (
+      tester,
+    ) async {
+      final store = InMemoryLocalStore(suppliers: [supplier('s1', 'Pharma Co')]);
+      await pumpApp(tester, store);
+
+      await tester.tap(find.text('New Invoice'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Supplier'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Pharma Co');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Pharma Co').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Invoice No'),
+        'INV-030',
+      );
+
+      Future<void> addLine(String name) async {
+        await tester.tap(find.text('Add item'));
+        await tester.pumpAndSettle();
+        final fields = find.widgetWithText(TextFormField, 'Product name');
+        await tester.enterText(fields.last, name);
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Boxes').last,
+          '1',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'Price per box (GH₵)').last,
+          '10',
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await addLine('Panadol');
+      await addLine('ORS Sachet');
+
+      // On the form the newest line is the first one shown...
+      final shown = tester
+          .widgetList<TextFormField>(
+            find.widgetWithText(TextFormField, 'Product name'),
+          )
+          .map((f) => f.controller?.text)
+          .toList();
+      expect(shown, ['ORS Sachet', 'Panadol']);
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      // ...but the invoice keeps the order the lines were entered in.
+      expect(
+        store.invoices.single.lines.map((l) => l.name),
+        ['Panadol', 'ORS Sachet'],
+      );
     });
 
     testWidgets('bulk selects and deletes invoices', (tester) async {

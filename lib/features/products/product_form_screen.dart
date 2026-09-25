@@ -172,7 +172,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  _Hint(
+                  FormHint(
                     text: _isEditing
                         ? 'Renaming this product does not change invoices that '
                             'already use it — invoice lines keep the name they '
@@ -191,40 +191,6 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         onCancel: () => context.pop(),
         onSave: _save,
         saveLabel: _isEditing ? 'Save changes' : 'Save product',
-      ),
-    );
-  }
-}
-
-class _Hint extends StatelessWidget {
-  const _Hint({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: scheme.primaryContainer.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.lightbulb_outline, size: 18, color: scheme.primary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurface,
-                    height: 1.4,
-                  ),
-            ),
-          ),
-        ],
       ),
     );
   }

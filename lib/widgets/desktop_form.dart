@@ -105,6 +105,43 @@ class FormSection extends StatelessWidget {
   }
 }
 
+/// A tinted note under a form section — says what the fields do rather than
+/// repeating what they are called.
+class FormHint extends StatelessWidget {
+  const FormHint({super.key, required this.text, this.icon = Icons.lightbulb_outline});
+
+  final String text;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: scheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurface,
+                    height: 1.4,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Pinned action bar so Save is always reachable without scrolling a long form.
 class FormActionsBar extends StatelessWidget {
   const FormActionsBar({
