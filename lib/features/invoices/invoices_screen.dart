@@ -599,75 +599,69 @@ class _InvoiceRow extends StatelessWidget {
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      child: Material(
-        color: selected
-            ? scheme.primaryContainer.withValues(alpha: 0.45)
-            : Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          onSecondaryTap: onSecondaryTap,
-          hoverColor: scheme.primary.withValues(alpha: 0.05),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // A colour stripe down the edge, so the state of an invoice can
-              // be read without reading the pill.
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                child: SizedBox(
-                  width: 3,
-                  child: ColoredBox(
-                    color: StatusBadge.colorOf(status).withValues(alpha: 0.85),
+      // A colour stripe down the leading edge, so the state of an invoice can
+      // be read without reading the pill.
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(
+              color: StatusBadge.colorOf(status).withValues(alpha: 0.9),
+              width: 3,
+            ),
+          ),
+        ),
+        child: Material(
+          color: selected
+              ? scheme.primaryContainer.withValues(alpha: 0.45)
+              : Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            onSecondaryTap: onSecondaryTap,
+            hoverColor: scheme.primary.withValues(alpha: 0.05),
+            child: Row(
+              children: [
+                if (selectionMode)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 10, right: 2),
+                    child: Checkbox(
+                      value: selected,
+                      onChanged: (_) => onToggle(),
+                    ),
+                  ),
+                cell(supplierName, flex: 22,
+                    style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                cell(invoice.invoiceNumber, flex: 13,
+                    style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                cell(formatDate(invoice.dueDate), flex: 10),
+                cell(
+                  formatPesewas(invoice.totalPesewas),
+                  flex: 10,
+                  align: TextAlign.right,
+                  style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                cell(formatPesewas(invoice.amountPaidPesewas), flex: 10,
+                    align: TextAlign.right),
+                cell(
+                  formatPesewas(invoice.balancePesewas),
+                  flex: 10,
+                  align: TextAlign.right,
+                  style: texts.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: invoice.owesMoney ? scheme.error : scheme.onSurface,
                   ),
                 ),
-              ),
-              Row(
-                children: [
-                  if (selectionMode)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 14, right: 2),
-                      child: Checkbox(
-                        value: selected,
-                        onChanged: (_) => onToggle(),
-                      ),
-                    ),
-                  cell(supplierName, flex: 22,
-                      style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                  cell(invoice.invoiceNumber, flex: 13,
-                      style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                  cell(formatDate(invoice.dueDate), flex: 10),
-                  cell(
-                    formatPesewas(invoice.totalPesewas),
-                    flex: 10,
-                    align: TextAlign.right,
-                    style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  cell(formatPesewas(invoice.amountPaidPesewas), flex: 10,
-                      align: TextAlign.right),
-                  cell(
-                    formatPesewas(invoice.balancePesewas),
-                    flex: 10,
-                    align: TextAlign.right,
-                    style: texts.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: invoice.owesMoney ? scheme.error : scheme.onSurface,
+                Expanded(
+                  flex: 12,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: StatusBadge(status: status),
                     ),
                   ),
-                  Expanded(
-                    flex: 12,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: StatusBadge(status: status),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
