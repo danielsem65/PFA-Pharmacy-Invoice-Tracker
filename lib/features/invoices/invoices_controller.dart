@@ -38,6 +38,13 @@ class InvoicesController extends StateNotifier<List<SupplierInvoice>> {
     await _store.saveInvoices(state);
   }
 
+  /// Replaces the whole list in one write, used when a payment moves the paid
+  /// amount on several invoices at once.
+  Future<void> replaceAll(List<SupplierInvoice> invoices) async {
+    state = invoices;
+    await _store.saveInvoices(state);
+  }
+
   /// Adds a batch in one write, used by the Excel import so a large sheet is
   /// saved once instead of once per invoice.
   Future<void> addMany(List<SupplierInvoice> invoices) async {

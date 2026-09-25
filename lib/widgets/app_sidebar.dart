@@ -237,8 +237,6 @@ class _QuickAdd extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 44,
-      alignment: Alignment.center,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: <Color>[Aurora.teal, Aurora.indigo],
@@ -252,24 +250,31 @@ class _QuickAdd extends StatelessWidget {
           ),
         ],
       ),
+      // Fills the whole gradient bar, so there is no dead space at the edges.
       child: Material(
         color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: () => context.go('/new'),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14),
+          child: const SizedBox(
+            height: 44,
+            width: double.infinity,
             child: Row(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 Icon(Icons.add_rounded, color: Colors.white, size: 20),
                 SizedBox(width: 6),
-                Text(
-                  'New invoice',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13.5,
+                Flexible(
+                  child: Text(
+                    'New invoice',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -351,7 +356,6 @@ class _SidebarItemState extends State<_SidebarItem> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
           decoration: BoxDecoration(
             color: selected
                 ? Colors.white.withValues(alpha: 0.13)
@@ -372,63 +376,80 @@ class _SidebarItemState extends State<_SidebarItem> {
                   ]
                 : null,
           ),
-          child: Row(
-            children: <Widget>[
-              // The accent bar grows out of the side of the active page.
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOut,
-                width: 3,
-                height: selected ? 22 : 0,
-                decoration: BoxDecoration(
-                  color: accent,
-                  borderRadius: BorderRadius.circular(3),
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: accent.withValues(alpha: 0.8),
-                      blurRadius: 8,
+          // The whole pill answers the click, not just the word inside it.
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: widget.onTap,
+              borderRadius: BorderRadius.circular(12),
+              hoverColor: Colors.white.withValues(alpha: 0.06),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                child: Row(
+                  children: <Widget>[
+                    // The accent bar grows out of the side of the active page.
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOut,
+                      width: 3,
+                      height: selected ? 22 : 0,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        borderRadius: BorderRadius.circular(3),
+                        boxShadow: <BoxShadow>[
+                          BoxShadow(
+                            color: accent.withValues(alpha: 0.8),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
                     ),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: selected ? 11 : 0,
+                    ),
+                    AnimatedScale(
+                      duration: const Duration(milliseconds: 200),
+                      scale: selected ? 1.12 : 1,
+                      child: Icon(
+                        selected
+                            ? widget.data.selectedIcon
+                            : widget.data.icon,
+                        size: 20,
+                        color: selected
+                            ? accent
+                            : Colors.white
+                                .withValues(alpha: _hovered ? 0.85 : 0.6),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        widget.data.label,
+                        style: TextStyle(
+                          color: selected
+                              ? Colors.white
+                              : Colors.white.withValues(alpha: 0.72),
+                          fontSize: 14,
+                          fontWeight:
+                              selected ? FontWeight.w800 : FontWeight.w600,
+                          letterSpacing: 0.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (selected)
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 18,
+                        color: accent.withValues(alpha: 0.9),
+                      ),
                   ],
                 ),
               ),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: selected ? 11 : 0,
-              ),
-              AnimatedScale(
-                duration: const Duration(milliseconds: 200),
-                scale: selected ? 1.12 : 1,
-                child: Icon(
-                  selected ? widget.data.selectedIcon : widget.data.icon,
-                  size: 20,
-                  color: selected
-                      ? accent
-                      : Colors.white.withValues(alpha: _hovered ? 0.85 : 0.6),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  widget.data.label,
-                  style: TextStyle(
-                    color: selected
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.72),
-                    fontSize: 14,
-                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                    letterSpacing: 0.1,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (selected)
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
-                  color: accent.withValues(alpha: 0.9),
-                ),
-            ],
+            ),
           ),
         ),
       ),

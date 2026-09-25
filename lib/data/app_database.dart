@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/payment.dart';
 import '../models/product.dart';
 import '../models/supplier.dart';
 import '../models/supplier_invoice.dart';
@@ -39,9 +40,11 @@ abstract class LocalStore {
   Future<List<Supplier>> loadSuppliers();
   Future<List<SupplierInvoice>> loadInvoices();
   Future<List<Product>> loadProducts();
+  Future<List<Payment>> loadPayments();
   Future<void> saveSuppliers(List<Supplier> suppliers);
   Future<void> saveInvoices(List<SupplierInvoice> invoices);
   Future<void> saveProducts(List<Product> products);
+  Future<void> savePayments(List<Payment> payments);
 
   /// Non-null when the last load hit damaged data. The list is only
   /// non-empty once per app run, so the UI can warn exactly once.
@@ -54,6 +57,7 @@ class SharedPrefsLocalStore implements LocalStore {
   static const _suppliersKey = 'pfa.suppliers.v1';
   static const _invoicesKey = 'pfa.invoices.v1';
   static const _productsKey = 'pfa.products.v1';
+  static const _paymentsKey = 'pfa.payments.v1';
   static const _backupSuffix = '.bak';
 
   final KeyValueStore _prefs;
@@ -75,6 +79,10 @@ class SharedPrefsLocalStore implements LocalStore {
       _loadList(_productsKey, Product.fromJson, 'products');
 
   @override
+  Future<List<Payment>> loadPayments() =>
+      _loadList(_paymentsKey, Payment.fromJson, 'payments');
+
+  @override
   Future<void> saveSuppliers(List<Supplier> suppliers) => _saveList(
         _suppliersKey,
         suppliers.map((e) => e.toJson()).toList(),
@@ -90,6 +98,12 @@ class SharedPrefsLocalStore implements LocalStore {
   Future<void> saveProducts(List<Product> products) => _saveList(
         _productsKey,
         products.map((e) => e.toJson()).toList(),
+      );
+
+  @override
+  Future<void> savePayments(List<Payment> payments) => _saveList(
+        _paymentsKey,
+        payments.map((e) => e.toJson()).toList(),
       );
 
   Future<List<T>> _loadList<T>(

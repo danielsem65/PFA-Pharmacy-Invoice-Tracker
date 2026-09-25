@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 
 import 'package:pfa_pharmacy_invoice_tracker/data/app_database.dart';
 import 'package:pfa_pharmacy_invoice_tracker/data/receipt_storage.dart';
+import 'package:pfa_pharmacy_invoice_tracker/models/payment.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/product.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/supplier.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/supplier_invoice.dart';
@@ -13,13 +14,16 @@ class InMemoryLocalStore implements LocalStore {
     List<Supplier>? suppliers,
     List<SupplierInvoice>? invoices,
     List<Product>? products,
+    List<Payment>? payments,
   })  : suppliers = suppliers ?? [],
         invoices = invoices ?? [],
-        products = products ?? [];
+        products = products ?? [],
+        payments = payments ?? [];
 
   List<Supplier> suppliers;
   List<SupplierInvoice> invoices;
   List<Product> products;
+  List<Payment> payments;
 
   @override
   String? get loadWarning => null;
@@ -34,6 +38,9 @@ class InMemoryLocalStore implements LocalStore {
   Future<List<Product>> loadProducts() async => List.of(products);
 
   @override
+  Future<List<Payment>> loadPayments() async => List.of(payments);
+
+  @override
   Future<void> saveSuppliers(List<Supplier> items) async {
     suppliers = List.of(items);
   }
@@ -46,6 +53,11 @@ class InMemoryLocalStore implements LocalStore {
   @override
   Future<void> saveProducts(List<Product> items) async {
     products = List.of(items);
+  }
+
+  @override
+  Future<void> savePayments(List<Payment> items) async {
+    payments = List.of(items);
   }
 }
 

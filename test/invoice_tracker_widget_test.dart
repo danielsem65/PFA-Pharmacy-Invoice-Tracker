@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pfa_pharmacy_invoice_tracker/app.dart';
 import 'package:pfa_pharmacy_invoice_tracker/data/app_database.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/product.dart';
+import 'package:pfa_pharmacy_invoice_tracker/widgets/app_sidebar.dart';
 
 import 'helpers.dart';
 
@@ -437,6 +438,61 @@ void main() {
 
       expect(store.invoices, isEmpty);
       expect(find.text('No invoices yet'), findsOneWidget);
+    });
+  });
+
+  group('AppSidebar', () {
+    // A tap has to land on the whole nav pill and the whole quick-add bar, not
+    // just on the word, so these aim at the icon end of each one. The finders
+    // are scoped to the sidebar because the pages repeat these same names.
+    Future<void> tapIconEnd(WidgetTester tester, String label) async {
+      final box = tester.getRect(
+        find.descendant(
+          of: find.byType(AppSidebar),
+          matching: find.text(label),
+        ),
+      );
+      await tester.tapAt(Offset(box.left - 26, box.center.dy));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('each nav item opens its page when tapped on the icon',
+        (tester) async {
+      await pumpApp(
+        tester,
+        InMemoryLocalStore(suppliers: [supplier('s1', 'Pharma Co')]),
+      );
+
+      await tapIconEnd(tester, 'Suppliers');
+      expect(find.text('Pharma Co'), findsOneWidget);
+
+      await tapIconEnd(tester, 'Products');
+      expect(find.text('No products yet'), findsOneWidget);
+
+      await tapIconEnd(tester, 'Invoices');
+      expect(find.text('No invoices yet'), findsOneWidget);
+    });
+
+    testWidgets('the whole quick-add bar opens a new invoice', (tester) async {
+      await pumpApp(tester, InMemoryLocalStore());
+
+      // Left of the label, over the gradient: the part that used to be dead.
+      await tapIconEnd(tester, 'New invoice');
+      expect(find.text('New Invoice'), findsOneWidget);
+
+      await tapIconEnd(tester, 'Invoices');
+      expect(find.text('No invoices yet'), findsOneWidget);
+
+      // And the right-hand end of the bar, for good measure.
+      final box = tester.getRect(
+        find.descendant(
+          of: find.byType(AppSidebar),
+          matching: find.text('New invoice'),
+        ),
+      );
+      await tester.tapAt(Offset(box.right + 22, box.center.dy));
+      await tester.pumpAndSettle();
+      expect(find.text('New Invoice'), findsOneWidget);
     });
   });
 }
