@@ -31,6 +31,7 @@ jobs:
 
   build-windows:
     name: Build Windows & Publish Release
+    needs: analyze-test
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,20 +48,63 @@ jobs:
         run: |
           flutter create --platforms=windows --no-overwrite . --org com.pfa --project-name pfa_pharmacy_invoice_tracker
 
+      - name: Bump the version for this build
+        id: bump
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $pubspec = (Resolve-Path pubspec.yaml).Path
+
+          function Get-Parts([string]$v) {
+            $core = ($v -split '\+')[0] -split '\.'
+            $bld = 0
+            if ($v -match '\+(\d+)$') { $bld = [int]$Matches[1] }
+            return @([int]$core[0], [int]$core[1], [int]$core[2], $bld)
+          }
+
+          $current = ((Select-String -Path $pubspec -Pattern '^version:').Line -replace 'version:\s*', '').Trim()
+          $parts = Get-Parts $current
+
+          # A lost bump commit can leave the file behind a published tag, so the
+          # next version is counted from whichever of the two is further along.
+          $latest = $null
+          try {
+            $releases = gh release list --limit 1 --json tagName | ConvertFrom-Json
+            if ($releases -and $releases[0].tagName -like 'v*') {
+              $latest = $releases[0].tagName -replace '^v', ''
+            }
+          } catch { }
+          if ($latest) {
+            $other = Get-Parts $latest
+            $ahead = $false
+            for ($i = 0; $i -lt 4; $i++) {
+              if ($other[$i] -gt $parts[$i]) { $ahead = $true; break }
+              if ($other[$i] -lt $parts[$i]) { break }
+            }
+            if ($ahead) { $parts = $other }
+          }
+
+          $next = "$($parts[0]).$($parts[1]).$($parts[2] + 1)+$($parts[3] + 1)"
+          $text = [System.IO.File]::ReadAllText($pubspec)
+          $text = [regex]::Replace($text, '(?m)^version:.*$', 'version: ' + $next)
+          [System.IO.File]::WriteAllText($pubspec, $text, (New-Object System.Text.UTF8Encoding($false)))
+
+          "Bumped $current -> $next" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          Write-Output "Bumped $current -> $next"
+          echo "APP_VERSION=$next" >> $env:GITHUB_ENV
+          echo "RELEASE_TAG=v$($next -replace '\+.*$','')" >> $env:GITHUB_ENV
+
       - name: Build Windows release
         run: flutter build windows --release
 
-      - name: Read version from pubspec
-        id: version
+      - name: Confirm the built version
         shell: pwsh
         run: |
-          $line = (Select-String -Path pubspec.yaml -Pattern '^version:').Line
-          $ver = ($line -replace 'version:\s*', '').Trim()
-          $tag = "v" + ($ver -split '\+')[0]
-          Write-Output "version=$ver"
-          Write-Output "tag=$tag"
-          echo "APP_VERSION=$ver" >> $env:GITHUB_ENV
-          echo "RELEASE_TAG=$tag" >> $env:GITHUB_ENV
+          $built = ((Select-String -Path pubspec.yaml -Pattern '^version:').Line -replace 'version:\s*', '').Trim()
+          if ($built -ne $env:APP_VERSION) {
+            throw "pubspec now says $built but this build publishes as $env:APP_VERSION"
+          }
 
       - name: Package Windows build
         shell: pwsh
@@ -69,7 +113,7 @@ jobs:
           Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath $asset
           echo "ASSET=$asset" >> $env:GITHUB_ENV
 
-      - name: Create rolling GitHub Release
+      - name: Create GitHub Release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -78,3 +122,12 @@ jobs:
           gh release create "$env:RELEASE_TAG" "$env:ASSET" `
             --title "v$env:APP_VERSION" `
             --notes "PFA Pharmacy Invoice Tracker $env:APP_VERSION — Windows build (x64). Download the ZIP, extract anywhere (not Program Files), and run PFA-Pharmacy-Invoice-Tracker.exe."
+
+      - name: Commit the version bump
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pubspec.yaml
+          git commit -m "Bump version to $env:APP_VERSION [skip ci]"
+          git push origin HEAD:main

@@ -131,7 +131,11 @@ final _wrapStyle = CellStyle(textWrapping: TextWrapping.WrapText);
 
 final _labelStyle = CellStyle(bold: true);
 
-final _titleStyle = CellStyle(bold: true, fontSize: 14);
+final _titleStyle = CellStyle(
+  bold: true,
+  fontSize: 14,
+  horizontalAlign: HorizontalAlign.Center,
+);
 
 /// Builds the .xlsx export: a summary plus one sheet per record type.
 ///
@@ -342,8 +346,15 @@ void _buildSummarySheet(
 
   final title = sheet.maxRows;
   sheet.appendRow([TextCellValue('PFA Pharmacy Invoice Tracker')]);
-  sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: title))
-      .cellStyle = _titleStyle;
+  final titleCell = CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: title);
+  sheet.cell(titleCell).cellStyle = _titleStyle;
+  // The title is one long line of text and the two columns under it are
+  // narrow, so it is given both of them and centred across the pair.
+  sheet.merge(
+    titleCell,
+    CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: title),
+  );
+  sheet.setMergedCellStyle(titleCell, _titleStyle);
   line('Exported', DateFormat('dd/MM/yyyy HH:mm').format(now));
   line('Invoices', '${invoices.length}');
   line('Suppliers', '${suppliers.length}');

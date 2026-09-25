@@ -1,3 +1,4 @@
+import 'package:excel/excel.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pfa_pharmacy_invoice_tracker/data/excel_service.dart';
 import 'package:pfa_pharmacy_invoice_tracker/features/import/invoice_importer.dart';
@@ -64,6 +65,17 @@ void main() {
       expect(workbook.sheetNames, hasLength(5));
       // The summary is the sheet the workbook opens on.
       expect(workbook.sheetNames.first, 'Summary');
+    });
+
+    test('merges and centres the summary title across two columns', () {
+      final excel = Excel.decodeBytes(buildSampleWorkbook());
+      final sheet = excel.tables['Summary']!;
+      final title = sheet.cell(
+        CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
+      );
+      expect(title.value.toString(), 'PFA Pharmacy Invoice Tracker');
+      expect(title.cellStyle?.horizontalAlign, HorizontalAlign.Center);
+      expect(sheet.spannedItems, contains('A1:B1'));
     });
 
     test('writes money as numbers in cedis, not pesewas or text', () {
