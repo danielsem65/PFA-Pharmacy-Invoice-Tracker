@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/format.dart';
 import '../../models/supplier.dart';
 import '../invoices/invoices_controller.dart';
-import '../suppliers/suppliers_controller.dart';
+import 'suppliers_controller.dart';
 
 class SuppliersScreen extends ConsumerStatefulWidget {
   const SuppliersScreen({super.key});
@@ -21,7 +21,7 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
   Widget build(BuildContext context) {
     final suppliers = ref.watch(suppliersProvider);
     final invoices = ref.watch(invoicesProvider);
-    final texts = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
 
     int owedBy(Supplier s) {
       var total = 0;
@@ -37,17 +37,46 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
         .toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Suppliers'),
-      ),
       body: Column(
         children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF0B3B52), Color(0xFF0E7490)],
+              ),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Suppliers',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${suppliers.length} ${suppliers.length == 1 ? 'distributor' : 'distributors'}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.75),
+                      ),
+                ),
+              ],
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: TextField(
               decoration: const InputDecoration(
                 hintText: 'Search suppliers…',
                 prefixIcon: Icon(Icons.search),
+                isDense: true,
               ),
               onChanged: (v) => setState(() => _query = v),
             ),
@@ -56,32 +85,108 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
             child: visible.isEmpty
                 ? const _EmptySuppliers()
                 : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
                     itemCount: visible.length,
                     itemBuilder: (context, index) {
                       final s = visible[index];
                       final owe = owedBy(s);
-                      return ListTile(
-                        leading: CircleAvatar(
-                          child: Text(s.name.isEmpty ? '?' : s.name[0]),
-                        ),
-                        title: Text(s.name),
-                        subtitle: Text(
-                          [s.phone, s.location]
-                              .where((e) => e.trim().isNotEmpty)
-                              .join(' · '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: Text(
-                          owe > 0 ? 'You owe ${formatPesewas(owe)}' : '',
-                          style: texts.bodyMedium?.copyWith(
-                            color: owe > 0
-                                ? Theme.of(context).colorScheme.error
-                                : Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Material(
+                          color: scheme.surfaceContainerLowest,
+                          borderRadius: BorderRadius.circular(18),
+                          child: InkWell(
+                            onTap: () => context.go('/suppliers/${s.id}/edit'),
+                            borderRadius: BorderRadius.circular(18),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: scheme.outlineVariant
+                                      .withValues(alpha: 0.5),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  _Avatar(name: s.name),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          s.name,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        if ([s.phone, s.location]
+                                            .where((e) => e.trim().isNotEmpty)
+                                            .isNotEmpty)
+                                          Text(
+                                            [s.phone, s.location]
+                                                .where((e) =>
+                                                    e.trim().isNotEmpty)
+                                                .join(' · '),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color:
+                                                      scheme.onSurfaceVariant,
+                                                ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (owe > 0)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFC62828),
+                                        borderRadius: BorderRadius.circular(999),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFFC62828)
+                                                .withValues(alpha: 0.25),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Text(
+                                        'You owe ${formatPesewas(owe)}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
+                                    )
+                                  else
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: const Color(0xFF0E7C4A),
+                                      size: 20,
+                                    ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
-                        onTap: () => context.go('/suppliers/${s.id}/edit'),
                       );
                     },
                   ),
@@ -92,6 +197,37 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
         onPressed: () => context.go('/suppliers/new'),
         icon: const Icon(Icons.add),
         label: const Text('Supplier'),
+      ),
+    );
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final letter = name.trim().isEmpty ? '?' : name.trim()[0].toUpperCase();
+    return Container(
+      width: 44,
+      height: 44,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0E7490), Color(0xFF0F9D77)],
+        ),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Text(
+        letter,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
       ),
     );
   }

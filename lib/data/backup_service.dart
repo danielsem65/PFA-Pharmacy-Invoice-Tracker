@@ -38,9 +38,18 @@ class BackupService {
 
   static const _manifestName = 'manifest.json';
 
-  Future<void> exportZip(String targetPath) async {
-    final suppliers = await store.loadSuppliers();
-    final invoices = await store.loadInvoices();
+  Future<void> exportZip(String targetPath, {Set<String>? invoiceIds}) async {
+    final allSuppliers = await store.loadSuppliers();
+    final allInvoices = await store.loadInvoices();
+
+    final withoutIds = invoiceIds == null;
+    final invoices = withoutIds
+        ? allInvoices
+        : allInvoices.where((i) => invoiceIds!.contains(i.id)).toList();
+    final usedSupplierIds = invoices.map((i) => i.supplierId).toSet();
+    final suppliers = withoutIds
+        ? allSuppliers
+        : allSuppliers.where((s) => usedSupplierIds.contains(s.id)).toList();
 
     final archive = Archive();
     archive.addFile(ArchiveFile.string(

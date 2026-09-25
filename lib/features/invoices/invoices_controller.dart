@@ -32,6 +32,11 @@ class InvoicesController extends StateNotifier<List<SupplierInvoice>> {
     state = state.where((i) => i.id != id).toList();
     await _store.saveInvoices(state);
   }
+
+  Future<void> removeMany(Set<String> ids) async {
+    state = state.where((i) => !ids.contains(i.id)).toList();
+    await _store.saveInvoices(state);
+  }
 }
 
 final invoicesProvider =

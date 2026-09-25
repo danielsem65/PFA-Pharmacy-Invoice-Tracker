@@ -13,6 +13,7 @@ class App extends ConsumerWidget {
     return MaterialApp.router(
       title: 'PFA Pharmacy Invoice Tracker',
       theme: buildTheme(),
+      darkTheme: buildDarkTheme(),
       debugShowCheckedModeBanner: false,
       routerConfig: router,
     );

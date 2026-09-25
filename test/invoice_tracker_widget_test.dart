@@ -56,12 +56,11 @@ void main() {
       expect(find.text('Pharma Co'), findsOneWidget);
       expect(find.text('INV-002'), findsOneWidget);
 
-      // Card label 'Overdue' + the overdue row's status cell.
-      expect(find.text('Overdue'), findsNWidgets(2));
-      // Column header 'Paid' + the paid row's status cell.
-      expect(find.text('Paid'), findsNWidgets(2));
+      // Status words now render only inside the StatusBadge pill.
+      expect(find.text('Overdue'), findsOneWidget);
+      expect(find.text('Paid'), findsOneWidget);
 
-      // Total owing card, overdue card and row totals/balances.
+      // Header outstanding, overdue pill and row totals/balances.
       expect(find.text('₵100.00'), findsNWidgets(4));
       expect(find.text('₵50.00'), findsNWidgets(2));
       expect(find.text('₵0.00'), findsNWidgets(2));
@@ -157,6 +156,55 @@ void main() {
 
       expect(find.text('Select a supplier first.'), findsOneWidget);
       expect(store.invoices, isEmpty);
+    });
+
+    testWidgets('bulk selects and deletes invoices', (tester) async {
+      final store = InMemoryLocalStore(
+        suppliers: [
+          supplier('s1', 'Pharma Co'),
+          supplier('s2', 'Chem Co'),
+        ],
+        invoices: [
+          invoice(
+            id: 'i1',
+            supplierId: 's1',
+            invoiceNumber: 'INV-001',
+            amountPesewas: 10000,
+            dueDate: DateTime(2000, 1, 31),
+          ),
+          invoice(
+            id: 'i2',
+            supplierId: 's2',
+            invoiceNumber: 'INV-002',
+            amountPesewas: 5000,
+            amountPaidPesewas: 5000,
+            dueDate: DateTime(2030, 1, 31),
+          ),
+        ],
+      );
+      await pumpApp(tester, store);
+
+      await tester.tap(find.byTooltip('Select invoices'));
+      await tester.pumpAndSettle();
+
+      // Selecting enters selection mode; the first invoice is pre-selected.
+      expect(find.text('1 selected'), findsOneWidget);
+
+      await tester.tap(find.text('INV-002'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('2 selected'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Delete'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Delete 2 invoices?'), findsOneWidget);
+
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+
+      expect(store.invoices, isEmpty);
+      expect(find.text('No invoices yet'), findsOneWidget);
     });
   });
 }

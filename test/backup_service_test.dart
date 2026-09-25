@@ -55,6 +55,55 @@ void main() {
     expect(await restoredReceipts.readReceipt(storedName), [1, 2, 3, 4, 5]);
   });
 
+  test('exportZip with invoiceIds exports only those invoices', () async {
+    final root = Directory.systemTemp.createTempSync('partial');
+    addTearDown(() => root.deleteSync(recursive: true));
+
+    final receiptIds = <String>[];
+    for (var i = 0; i < 2; i++) {
+      final storage = TestReceiptStorage(p.join(root.path, 'r$i'));
+      final file = File(p.join(root.path, 'src_$i.png'));
+      file.writeAsBytesSync([i + 1]);
+      receiptIds.add(await storage.saveReceiptFile(file.path));
+    }
+
+    // Both invoices belong to the same supplier so the referenced-supplier
+    // filter keeps the supplier even with a partial export.
+    final store = InMemoryLocalStore(
+      suppliers: [supplier('s1', 'Pharma Co')],
+      invoices: [
+        invoice(
+          id: 'i1',
+          supplierId: 's1',
+          invoiceNumber: 'INV-001',
+          amountPesewas: 12000,
+          receipts: [receiptIds[0]],
+        ),
+        invoice(
+          id: 'i2',
+          supplierId: 's1',
+          invoiceNumber: 'INV-002',
+          amountPesewas: 8000,
+          receipts: [receiptIds[1]],
+        ),
+      ],
+    );
+
+    final service = BackupService(
+      store: store,
+      receipts: TestReceiptStorage(p.join(root.path, 'receipts')),
+    );
+    final zipPath = p.join(root.path, 'partial.zip');
+    await service.exportZip(zipPath, invoiceIds: {'i1'});
+
+    final content = await service.readZip(zipPath);
+    expect(content.invoices.length, 1);
+    expect(content.invoices.single.id, 'i1');
+    // Shared supplier must be included so the partial backup restores.
+    expect(content.suppliers.single.id, 's1');
+    expect(content.receipts.keys.toList(), [receiptIds[0]]);
+  });
+
   test('readZip throws FormatException when invoices.json is missing', () async {
     final root = Directory.systemTemp.createTempSync('bad');
     addTearDown(() => root.deleteSync(recursive: true));

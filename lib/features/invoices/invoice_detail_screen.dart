@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/format.dart';
 import '../../data/receipt_storage.dart';
 import '../../models/supplier_invoice.dart';
+import '../../widgets/status_badge.dart';
 import 'invoices_controller.dart';
 import '../suppliers/suppliers_controller.dart';
 
@@ -42,7 +43,6 @@ class InvoiceDetailScreen extends ConsumerWidget {
         .where((s) => s.id == inv.supplierId)
         .firstOrNull
         ?.name ?? 'Unknown supplier';
-    final scheme = Theme.of(context).colorScheme;
     final status = inv.statusAt(now);
 
     return Scaffold(
@@ -68,31 +68,75 @@ class InvoiceDetailScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Chip(
-                        label: Text(status.label),
-                        backgroundColor: status == InvoiceStatus.overdue
-                            ? scheme.errorContainer
-                            : status == InvoiceStatus.paid
-                                ? scheme.tertiaryContainer
-                                : scheme.secondaryContainer,
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF0B3B52), Color(0xFF0E7490)],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0E7490).withValues(alpha: 0.25),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
                       ),
-                    ),
-                    Text(
-                      formatPesewas(inv.balancePesewas),
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: inv.owesMoney
-                                ? scheme.error
-                                : scheme.primary,
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              inv.invoiceNumber,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineSmall
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                    ),
-                  ],
+                          StatusBadge(status: status),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        supplierName,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.8),
+                            ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        inv.owesMoney ? 'OUTSTANDING' : 'SETTLED',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.7),
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.2,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        formatPesewas(inv.balancePesewas),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 _row(context, 'Supplier', supplierName),
                 _row(context, 'Invoice No', inv.invoiceNumber),
                 if (inv.reference.isNotEmpty)
