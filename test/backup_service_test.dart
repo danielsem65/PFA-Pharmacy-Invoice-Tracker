@@ -59,9 +59,9 @@ void main() {
     final root = Directory.systemTemp.createTempSync('partial');
     addTearDown(() => root.deleteSync(recursive: true));
 
+    final storage = TestReceiptStorage(p.join(root.path, 'receipts'));
     final receiptIds = <String>[];
     for (var i = 0; i < 2; i++) {
-      final storage = TestReceiptStorage(p.join(root.path, 'r$i'));
       final file = File(p.join(root.path, 'src_$i.png'));
       file.writeAsBytesSync([i + 1]);
       receiptIds.add(await storage.saveReceiptFile(file.path));
@@ -89,10 +89,7 @@ void main() {
       ],
     );
 
-    final service = BackupService(
-      store: store,
-      receipts: TestReceiptStorage(p.join(root.path, 'receipts')),
-    );
+    final service = BackupService(store: store, receipts: storage);
     final zipPath = p.join(root.path, 'partial.zip');
     await service.exportZip(zipPath, invoiceIds: {'i1'});
 
