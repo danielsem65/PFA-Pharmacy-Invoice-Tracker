@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/format.dart';
+import '../../core/theme.dart';
 import '../../data/receipt_storage.dart';
 import '../../models/supplier_invoice.dart';
+import '../../widgets/aurora_background.dart';
 import '../../widgets/status_badge.dart';
 import 'invoices_controller.dart';
 import '../suppliers/suppliers_controller.dart';
@@ -161,22 +163,36 @@ class InvoiceDetailScreen extends ConsumerWidget {
 
   Widget _row(BuildContext context, String label, String value) {
     final texts = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              label,
-              style: texts.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: scheme.surface.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 150,
+              child: Text(
+                label,
+                style: texts.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-          Expanded(child: Text(value, style: texts.bodyLarge)),
-        ],
+            Expanded(
+              child: Text(
+                value,
+                style: texts.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -263,80 +279,87 @@ class _Hero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inv = invoice;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0B3B52), Color(0xFF0E7490)],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0E7490).withValues(alpha: 0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+    final accent = StatusBadge.colorOf(status);
+    return FadeSlideIn(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: <Color>[Aurora.nightC, Color(0xFF123A4A), Aurora.nightB],
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: accent.withValues(alpha: 0.28),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: ParticleDrift(
+          count: 16,
+          color: accent,
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        inv.invoiceNumber,
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            inv.invoiceNumber,
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.w800,
                             ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        StatusBadge(status: status),
+                      ],
                     ),
-                    StatusBadge(status: status),
+                    const SizedBox(height: 4),
+                    Text(
+                      supplierName,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  supplierName,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.8),
-                      ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                inv.owesMoney ? 'OUTSTANDING' : 'SETTLED',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
-                    ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                formatPesewas(inv.balancePesewas),
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    inv.owesMoney ? 'OUTSTANDING' : 'SETTLED',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    formatPesewas(inv.balancePesewas),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }

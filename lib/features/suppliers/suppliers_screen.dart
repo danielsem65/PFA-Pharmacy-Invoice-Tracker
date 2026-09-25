@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/format.dart';
+import '../../core/theme.dart';
 import '../../models/supplier.dart';
+import '../../widgets/page_header.dart';
 import '../invoices/invoices_controller.dart';
 import 'suppliers_controller.dart';
 
@@ -41,28 +43,14 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 16, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Suppliers',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${suppliers.length} ${suppliers.length == 1 ? 'distributor' : 'distributors'} you buy stock from',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+            child: PageHeader(
+              title: 'Suppliers',
+              subtitle:
+                  '${suppliers.length} ${suppliers.length == 1 ? 'distributor' : 'distributors'} you buy stock from',
+              icon: Icons.local_shipping,
+              accentIndex: 1,
+              actions: <Widget>[
                 FilledButton.icon(
                   onPressed: () => context.go('/suppliers/new'),
                   icon: const Icon(Icons.add),
@@ -72,20 +60,23 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 14, 16, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      hintText: 'Search suppliers…',
-                      prefixIcon: Icon(Icons.search),
-                      isDense: true,
+            padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+            child: FadeSlideIn(
+              delay: const Duration(milliseconds: 70),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: const InputDecoration(
+                        hintText: 'Search suppliers…',
+                        prefixIcon: Icon(Icons.search),
+                        isDense: true,
+                      ),
+                      onChanged: (v) => setState(() => _query = v),
                     ),
-                    onChanged: (v) => setState(() => _query = v),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 18),
@@ -118,68 +109,104 @@ class _SupplierTable extends StatelessWidget {
           letterSpacing: 0.4,
         );
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
+      margin: const EdgeInsets.fromLTRB(24, 0, 24, 20),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
-      ),
-      margin: const EdgeInsets.fromLTRB(24, 0, 16, 20),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 30,
-                  child: Text('Supplier',
-                      style: headerStyle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                ),
-                Expanded(
-                  flex: 22,
-                  child: Text('Contact',
-                      style: headerStyle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                ),
-                Expanded(
-                  flex: 18,
-                  child: Text(
-                    'Outstanding',
-                    textAlign: TextAlign.right,
-                    style: headerStyle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 56),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: ListView.builder(
-              itemCount: suppliers.length,
-              itemBuilder: (context, index) {
-                final s = suppliers[index];
-                return _SupplierRow(supplier: s, owed: owedBy(s));
-              },
-            ),
+        borderRadius: BorderRadius.circular(22),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.white.withValues(alpha: 0.72),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Aurora.sky.withValues(alpha: isDark ? 0.18 : 0.10),
+            blurRadius: 26,
+            offset: const Offset(0, 12),
           ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Column(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: <Color>[
+                    scheme.primary.withValues(alpha: 0.10),
+                    scheme.primary.withValues(alpha: 0.04),
+                  ],
+                ),
+                border: Border(
+                  bottom: BorderSide(
+                    color: scheme.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 30,
+                      child: Text('Supplier',
+                          style: headerStyle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    Expanded(
+                      flex: 22,
+                      child: Text('Contact',
+                          style: headerStyle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    Expanded(
+                      flex: 18,
+                      child: Text(
+                        'Outstanding',
+                        textAlign: TextAlign.right,
+                        style: headerStyle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 56),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: suppliers.length,
+                itemBuilder: (context, index) {
+                  final s = suppliers[index];
+                  return _SupplierRow(
+                    supplier: s,
+                    owed: owedBy(s),
+                    accentIndex: index,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _SupplierRow extends StatelessWidget {
-  const _SupplierRow({required this.supplier, required this.owed});
+  const _SupplierRow({
+    required this.supplier,
+    required this.owed,
+    required this.accentIndex,
+  });
 
   final Supplier supplier;
   final int owed;
+  final int accentIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -200,12 +227,12 @@ class _SupplierRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Row(
               children: [
-                Expanded(
-                  flex: 30,
-                  child: Row(
-                    children: [
-                      _Avatar(name: supplier.name),
-                      const SizedBox(width: 12),
+                    Expanded(
+                      flex: 30,
+                      child: Row(
+                        children: [
+                          _Avatar(name: supplier.name, accentIndex: accentIndex),
+                          const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,14 +276,23 @@ class _SupplierRow extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFC62828),
+                              gradient: const LinearGradient(
+                                colors: <Color>[Aurora.rose, Aurora.amber],
+                              ),
                               borderRadius: BorderRadius.circular(999),
+                              boxShadow: <BoxShadow>[
+                                BoxShadow(
+                                  color: Aurora.rose.withValues(alpha: 0.3),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                             ),
                             child: Text(
                               formatPesewas(owed),
                               style: texts.labelSmall?.copyWith(
                                 color: Colors.white,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w800,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -265,11 +301,22 @@ class _SupplierRow extends StatelessWidget {
                         )
                       : Align(
                           alignment: Alignment.centerRight,
-                          child: Text(
-                            'Settled',
-                            style: texts.labelMedium?.copyWith(
-                              color: const Color(0xFF0E7C4A),
-                              fontWeight: FontWeight.w700,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Aurora.emerald.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: Aurora.emerald.withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Text(
+                              'Settled',
+                              style: texts.labelMedium?.copyWith(
+                                color: const Color(0xFF046C4E),
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
                         ),
@@ -286,24 +333,33 @@ class _SupplierRow extends StatelessWidget {
 }
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({required this.name});
+  const _Avatar({required this.name, required this.accentIndex});
 
   final String name;
+  final int accentIndex;
 
   @override
   Widget build(BuildContext context) {
     final letter = name.trim().isEmpty ? '?' : name.trim()[0].toUpperCase();
+    final colors = Aurora.pair(accentIndex);
     return Container(
       width: 40,
       height: 40,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF0E7490), Color(0xFF0F9D77)],
+          colors: colors,
         ),
         borderRadius: BorderRadius.circular(12),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: colors.first.withValues(alpha: 0.35),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Text(
         letter,
@@ -321,29 +377,11 @@ class _EmptySuppliers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final texts = Theme.of(context).textTheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.local_shipping_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-            const SizedBox(height: 12),
-            Text('No suppliers yet', style: texts.titleMedium),
-            const SizedBox(height: 4),
-            Text(
-              'Add the distributors you buy medicines from.',
-              style: texts.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+    return const EmptyState(
+      icon: Icons.local_shipping_outlined,
+      title: 'No suppliers yet',
+      message: 'Add the distributors you buy medicines from.',
+      accentIndex: 1,
     );
   }
 }

@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/format.dart';
+import '../../core/theme.dart';
 import '../../features/invoices/invoices_controller.dart';
 import '../../models/product.dart';
+import '../../widgets/aurora_background.dart';
 import '../../widgets/more_menu_button.dart';
+import '../../widgets/page_header.dart';
 import 'products_controller.dart';
 
 class ProductsScreen extends ConsumerStatefulWidget {
@@ -51,30 +54,15 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 16, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Products',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${products.length} ${products.length == 1 ? 'product' : 'products'} you buy — pick one while adding invoice items',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+            child: PageHeader(
+              title: 'Products',
+              subtitle:
+                  '${products.length} ${products.length == 1 ? 'product' : 'products'} you buy — pick one while adding invoice items',
+              icon: Icons.medication_liquid,
+              accentIndex: 2,
+              actions: <Widget>[
                 MoreMenuButton(visibleProducts: visible),
-                const SizedBox(width: 8),
                 FilledButton.icon(
                   onPressed: () => context.go('/products/new'),
                   icon: const Icon(Icons.add),
@@ -84,20 +72,23 @@ class _ProductsScreenState extends ConsumerState<ProductsScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 14, 16, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      hintText: 'Search products…',
-                      prefixIcon: Icon(Icons.search),
-                      isDense: true,
+            padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+            child: FadeSlideIn(
+              delay: const Duration(milliseconds: 70),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: const InputDecoration(
+                        hintText: 'Search products…',
+                        prefixIcon: Icon(Icons.search),
+                        isDense: true,
+                      ),
+                      onChanged: (v) => setState(() => _query = v),
                     ),
-                    onChanged: (v) => setState(() => _query = v),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 18),
@@ -133,68 +124,97 @@ class _ProductTable extends StatelessWidget {
           letterSpacing: 0.4,
         );
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
+      margin: const EdgeInsets.fromLTRB(24, 0, 24, 20),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
-      ),
-      margin: const EdgeInsets.fromLTRB(24, 0, 16, 20),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 40,
-                  child: Text('Product', style: headerStyle),
-                ),
-                Expanded(
-                  flex: 18,
-                  child: Text(
-                    'Pieces per box',
-                    textAlign: TextAlign.right,
-                    style: headerStyle,
-                  ),
-                ),
-                Expanded(
-                  flex: 20,
-                  child: Text(
-                    'Price per box',
-                    textAlign: TextAlign.right,
-                    style: headerStyle,
-                  ),
-                ),
-                Expanded(
-                  flex: 16,
-                  child: Text(
-                    'Used on',
-                    textAlign: TextAlign.right,
-                    style: headerStyle,
-                  ),
-                ),
-                const SizedBox(width: 32),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: ListView.builder(
-              itemCount: products.length,
-              itemBuilder: (context, index) {
-                final p = products[index];
-                final count = usedIn(p.normalizedName);
-                return _ProductRow(
-                  product: p,
-                  usedOn: count == 0
-                      ? '—'
-                      : '$count ${count == 1 ? 'invoice' : 'invoices'}',
-                );
-              },
-            ),
+        borderRadius: BorderRadius.circular(22),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.white.withValues(alpha: 0.72),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Aurora.violet.withValues(alpha: isDark ? 0.18 : 0.10),
+            blurRadius: 26,
+            offset: const Offset(0, 12),
           ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Column(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: <Color>[
+                    scheme.primary.withValues(alpha: 0.10),
+                    scheme.primary.withValues(alpha: 0.04),
+                  ],
+                ),
+                border: Border(
+                  bottom: BorderSide(
+                    color: scheme.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 40,
+                      child: Text('Product', style: headerStyle),
+                    ),
+                    Expanded(
+                      flex: 18,
+                      child: Text(
+                        'Pieces per box',
+                        textAlign: TextAlign.right,
+                        style: headerStyle,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 20,
+                      child: Text(
+                        'Price per box',
+                        textAlign: TextAlign.right,
+                        style: headerStyle,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 16,
+                      child: Text(
+                        'Used on',
+                        textAlign: TextAlign.right,
+                        style: headerStyle,
+                      ),
+                    ),
+                    const SizedBox(width: 32),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: products.length,
+                itemBuilder: (context, index) {
+                  final p = products[index];
+                  final count = usedIn(p.normalizedName);
+                  return _ProductRow(
+                    product: p,
+                    accentIndex: index,
+                    usedOn: count == 0
+                        ? '—'
+                        : '$count ${count == 1 ? 'invoice' : 'invoices'}',
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -204,10 +224,12 @@ class _ProductRow extends StatelessWidget {
   const _ProductRow({
     required this.product,
     required this.usedOn,
+    required this.accentIndex,
   });
 
   final Product product;
   final String usedOn;
+  final int accentIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -229,7 +251,10 @@ class _ProductRow extends StatelessWidget {
                   flex: 40,
                   child: Row(
                     children: [
-                      _ProductAvatar(name: product.name),
+                      _ProductAvatar(
+                        name: product.name,
+                        accentIndex: accentIndex,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -274,7 +299,7 @@ class _ProductRow extends StatelessWidget {
                         : '—',
                     textAlign: TextAlign.right,
                     style: texts.bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
+                        ?.copyWith(fontWeight: FontWeight.w700),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -302,24 +327,33 @@ class _ProductRow extends StatelessWidget {
 }
 
 class _ProductAvatar extends StatelessWidget {
-  const _ProductAvatar({required this.name});
+  const _ProductAvatar({required this.name, required this.accentIndex});
 
   final String name;
+  final int accentIndex;
 
   @override
   Widget build(BuildContext context) {
     final letter = name.trim().isEmpty ? '?' : name.trim()[0].toUpperCase();
+    final colors = Aurora.pair(accentIndex + 2);
     return Container(
       width: 40,
       height: 40,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF0E7490), Color(0xFF0F9D77)],
+          colors: colors,
         ),
         borderRadius: BorderRadius.circular(12),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: colors.first.withValues(alpha: 0.35),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Text(
         letter,
@@ -337,35 +371,17 @@ class _EmptyProducts extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final texts = Theme.of(context).textTheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.medication_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-            const SizedBox(height: 12),
-            Text('No products yet', style: texts.titleMedium),
-            const SizedBox(height: 4),
-            Text(
-              'Save the products you buy so their pack size and price are '
-              'filled in for you when you add an invoice item.',
-              style: texts.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: () => context.go('/products/new'),
-              icon: const Icon(Icons.add),
-              label: const Text('Add product'),
-            ),
-          ],
-        ),
+    return EmptyState(
+      icon: Icons.medication_outlined,
+      title: 'No products yet',
+      message:
+          'Save the products you buy so their pack size and price are filled in '
+          'for you when you add an invoice item.',
+      accentIndex: 2,
+      action: FilledButton.icon(
+        onPressed: () => context.go('/products/new'),
+        icon: const Icon(Icons.add),
+        label: const Text('Add product'),
       ),
     );
   }
