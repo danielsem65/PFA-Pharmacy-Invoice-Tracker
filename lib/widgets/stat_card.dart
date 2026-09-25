@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme.dart';
+
+/// A number worth noticing: a coloured icon, a quiet label, the figure itself.
 class StatCard extends StatelessWidget {
   const StatCard({
     super.key,
@@ -8,6 +11,7 @@ class StatCard extends StatelessWidget {
     required this.icon,
     required this.gradient,
     this.compact = false,
+    this.delay = Duration.zero,
   });
 
   final String label;
@@ -15,78 +19,85 @@ class StatCard extends StatelessWidget {
   final IconData icon;
   final List<Color> gradient;
   final bool compact;
+  final Duration delay;
 
-  static final List<Color> primary = [
-    const Color(0xFF0E7490),
-    const Color(0xFF0F9D77),
-  ];
-
-  static final List<Color> danger = [
-    const Color(0xFFD44545),
-    const Color(0xFFF07A55),
-  ];
-
-  static final List<Color> neutral = [
-    const Color(0xFF34495E),
-    const Color(0xFF5D6D7E),
-  ];
+  static final List<Color> primary = <Color>[Aurora.teal, Aurora.indigo];
+  static final List<Color> danger = <Color>[Aurora.rose, Aurora.amber];
+  static final List<Color> neutral = <Color>[Aurora.sky, Aurora.violet];
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final texts = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final lead = gradient.isEmpty ? scheme.primary : gradient.first;
     final width = compact ? 88.0 : 120.0;
-    return Container(
-      width: width,
-      constraints: const BoxConstraints(minHeight: 74),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: gradient,
+
+    return FadeSlideIn(
+      delay: delay,
+      child: Container(
+        width: width,
+        constraints: const BoxConstraints(minHeight: 92),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.white.withValues(alpha: 0.72),
+          border: Border.all(color: lead.withValues(alpha: 0.20)),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: lead.withValues(alpha: isDark ? 0.20 : 0.10),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: gradient.first.withValues(alpha: 0.30),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 15, color: Colors.white.withValues(alpha: 0.95)),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  label.toUpperCase(),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.4,
-                      ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Container(
+                  width: 30,
+                  height: 30,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: gradient),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, size: 16, color: Colors.white),
                 ),
+                const SizedBox(width: 9),
+                Flexible(
+                  child: Text(
+                    label.toUpperCase(),
+                    style: texts.labelSmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.6,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: texts.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.6,
+                fontSize: compact ? 18 : 23,
+                color: scheme.onSurface,
               ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: compact ? 18 : 22,
-                ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }

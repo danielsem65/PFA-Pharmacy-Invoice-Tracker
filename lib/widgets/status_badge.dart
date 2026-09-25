@@ -2,35 +2,98 @@ import 'package:flutter/material.dart';
 
 import '../models/supplier_invoice.dart';
 
+/// The coloured pill that says where an invoice stands: settled, overdue,
+/// part-paid or still open.
 class StatusBadge extends StatelessWidget {
   const StatusBadge({super.key, required this.status});
 
   final InvoiceStatus status;
 
-  Color get _background {
+  /// The colour that stands for this status, so a row can pick it up for its
+  /// own accent without repeating the mapping.
+  static Color colorOf(InvoiceStatus status) {
     switch (status) {
       case InvoiceStatus.paid:
-        return const Color(0xFF0E7C4A);
+        return const Color(0xFF0E9F6E);
       case InvoiceStatus.overdue:
-        return const Color(0xFFC62828);
+        return const Color(0xFFE11D48);
       case InvoiceStatus.partiallyPaid:
-        return const Color(0xFFB26A00);
+        return const Color(0xFFEA9A0B);
       case InvoiceStatus.open:
-        return const Color(0xFF1565C0);
+        return const Color(0xFF0284C7);
     }
   }
 
+  /// A darker twin of the same hue, for text that sits on a light background.
+  static Color inkOf(InvoiceStatus status) {
+    switch (status) {
+      case InvoiceStatus.paid:
+        return const Color(0xFF046C4E);
+      case InvoiceStatus.overdue:
+        return const Color(0xFF9F1239);
+      case InvoiceStatus.partiallyPaid:
+        return const Color(0xFF92400E);
+      case InvoiceStatus.open:
+        return const Color(0xFF075985);
+    }
+  }
+
+  Color get _background => colorOf(status);
+
   @override
   Widget build(BuildContext context) {
-    final foreground = Theme.of(context).colorScheme.onPrimary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = _background;
+
+    if (isDark) {
+      return _Pill(
+        colors: <Color>[color.withValues(alpha: 0.28), color.withValues(alpha: 0.18)],
+        border: color.withValues(alpha: 0.5),
+        dot: color,
+        foreground: Colors.white,
+        label: status.label,
+        glow: color,
+      );
+    }
+    return _Pill(
+      colors: <Color>[color.withValues(alpha: 0.16), color.withValues(alpha: 0.08)],
+      border: color.withValues(alpha: 0.32),
+      dot: color,
+      foreground: inkOf(status),
+      label: status.label,
+      glow: color,
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({
+    required this.colors,
+    required this.border,
+    required this.dot,
+    required this.foreground,
+    required this.label,
+    required this.glow,
+  });
+
+  final List<Color> colors;
+  final Color border;
+  final Color dot;
+  final Color foreground;
+  final String label;
+  final Color glow;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: _background,
+        gradient: LinearGradient(colors: colors),
         borderRadius: BorderRadius.circular(999),
-        boxShadow: [
+        border: Border.all(color: border),
+        boxShadow: <BoxShadow>[
           BoxShadow(
-            color: _background.withValues(alpha: 0.35),
+            color: glow.withValues(alpha: 0.18),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -40,22 +103,19 @@ class StatusBadge extends StatelessWidget {
         fit: BoxFit.scaleDown,
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: [
+          children: <Widget>[
             Container(
               width: 6,
               height: 6,
-              decoration: BoxDecoration(
-                color: foreground,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
             ),
             const SizedBox(width: 6),
             Text(
-              status.label,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelMedium
-                  ?.copyWith(color: foreground, fontWeight: FontWeight.w700),
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: foreground,
+                    fontWeight: FontWeight.w800,
+                  ),
             ),
           ],
         ),

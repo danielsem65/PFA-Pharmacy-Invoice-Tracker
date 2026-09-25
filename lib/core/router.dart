@@ -12,6 +12,7 @@ import '../features/products/products_screen.dart';
 import '../features/suppliers/supplier_form_screen.dart';
 import '../features/suppliers/suppliers_screen.dart';
 import '../widgets/app_sidebar.dart';
+import '../widgets/aurora_background.dart';
 import '../widgets/toast.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -155,23 +156,25 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      body: Row(
-        children: [
-          AppSidebar(
-            index: widget.navigationShell.currentIndex,
-            onSelect: (index) => widget.navigationShell.goBranch(
-              index,
-              initialLocation: index == widget.navigationShell.currentIndex,
-            ),
+      body: Stack(
+        children: <Widget>[
+          // The sky sits behind everything; the translucent page colour lets a
+          // little of it through the gaps between cards.
+          const Positioned.fill(child: AuroraBackground()),
+          Row(
+            children: <Widget>[
+              AppSidebar(
+                index: widget.navigationShell.currentIndex,
+                onSelect: (index) => widget.navigationShell.goBranch(
+                  index,
+                  initialLocation:
+                      index == widget.navigationShell.currentIndex,
+                ),
+              ),
+              Expanded(child: widget.navigationShell),
+            ],
           ),
-          VerticalDivider(
-            width: 1,
-            thickness: 1,
-            color: scheme.outlineVariant.withValues(alpha: 0.4),
-          ),
-          Expanded(child: widget.navigationShell),
         ],
       ),
     );

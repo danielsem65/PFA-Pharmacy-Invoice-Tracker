@@ -1,4 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../core/theme.dart';
 
 class AppSidebar extends StatelessWidget {
   const AppSidebar({
@@ -10,198 +15,263 @@ class AppSidebar extends StatelessWidget {
   final int index;
   final ValueChanged<int> onSelect;
 
+  static const _items = <_NavItemData>[
+    _NavItemData(
+      icon: Icons.receipt_long_outlined,
+      selectedIcon: Icons.receipt_long,
+      label: 'Invoices',
+      accent: Aurora.teal,
+    ),
+    _NavItemData(
+      icon: Icons.local_shipping_outlined,
+      selectedIcon: Icons.local_shipping,
+      label: 'Suppliers',
+      accent: Aurora.sky,
+    ),
+    _NavItemData(
+      icon: Icons.medication_outlined,
+      selectedIcon: Icons.medication_liquid,
+      label: 'Products',
+      accent: Aurora.violet,
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Container(
-      width: 232,
-      color: scheme.surfaceContainerLow,
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 18),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF0E7490), Color(0xFF0F9D77)],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF0E7490)
-                              .withValues(alpha: 0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.medication_liquid,
-                      color: Colors.white,
-                      size: 22,
-                    ),
+      width: 244,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Aurora.nightC, Aurora.nightA, Aurora.nightB],
+        ),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 26,
+            offset: Offset(8, 0),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: <Widget>[
+          // Two soft blooms so the panel is not a flat block of navy.
+          Positioned(
+            top: -90,
+            right: -70,
+            child: const _SidebarBloom(color: Aurora.indigo, size: 260),
+          ),
+          Positioned(
+            bottom: 60,
+            left: -80,
+            child: const _SidebarBloom(color: Aurora.teal, size: 240),
+          ),
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const SizedBox(height: 20),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 18),
+                  child: _Brand(),
+                ),
+                const SizedBox(height: 22),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, 10),
+                  child: _SectionLabel('WORKSPACE'),
+                ),
+                for (var i = 0; i < _items.length; i++)
+                  _SidebarItem(
+                    data: _items[i],
+                    selected: index == i,
+                    onTap: () => onSelect(i),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Invoice Tracker',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          'PFA Pharmacy',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                const SizedBox(height: 18),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 18),
+                  child: _QuickAdd(),
+                ),
+                const Spacer(),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(18, 0, 18, 16),
+                  child: _SidebarFooter(),
+                ),
+              ],
             ),
-            const SizedBox(height: 22),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Divider(height: 1),
-            ),
-            const SizedBox(height: 12),
-            _SidebarItem(
-              icon: Icons.receipt_long_outlined,
-              selectedIcon: Icons.receipt_long,
-              label: 'Invoices',
-              selected: index == 0,
-              onTap: () => onSelect(0),
-            ),
-            _SidebarItem(
-              icon: Icons.local_shipping_outlined,
-              selectedIcon: Icons.local_shipping,
-              label: 'Suppliers',
-              selected: index == 1,
-              onTap: () => onSelect(1),
-            ),
-            _SidebarItem(
-              icon: Icons.medication_outlined,
-              selectedIcon: Icons.medication_liquid,
-              label: 'Products',
-              selected: index == 2,
-              onTap: () => onSelect(2),
-            ),
-            const Spacer(),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Divider(height: 1),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.cloud_off_outlined,
-                    size: 15,
-                    color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Offline · data stays on this PC',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant
-                                .withValues(alpha: 0.8),
-                          ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavItemData {
+  const _NavItemData({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.accent,
+  });
+
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final Color accent;
+}
+
+class _SidebarBloom extends StatelessWidget {
+  const _SidebarBloom({required this.color, required this.size});
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: <Color>[
+              color.withValues(alpha: 0.32),
+              color.withValues(alpha: 0),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _SidebarItem extends StatelessWidget {
-  const _SidebarItem({
-    required this.icon,
-    required this.selectedIcon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final IconData selectedIcon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
+class _Brand extends StatelessWidget {
+  const _Brand();
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      child: Material(
-        color: selected ? scheme.primaryContainer : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            child: Row(
-              children: [
-                if (selected) ...[
-                  Container(
-                    width: 4,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: scheme.primary,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                ] else
-                  const SizedBox(width: 14),
-                Icon(
-                  selected ? selectedIcon : icon,
-                  size: 20,
-                  color: selected ? scheme.primary : scheme.onSurfaceVariant,
+    return Row(
+      children: <Widget>[
+        Container(
+          width: 42,
+          height: 42,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: <Color>[Aurora.teal, Aurora.indigo],
+            ),
+            borderRadius: BorderRadius.circular(13),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Aurora.teal.withValues(alpha: 0.45),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.medication_liquid,
+            color: Colors.white,
+            size: 23,
+          ),
+        ),
+        const SizedBox(width: 12),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                'Invoice Tracker',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: selected
-                              ? FontWeight.w800
-                              : FontWeight.w600,
-                          color: selected
-                              ? scheme.onPrimaryContainer
-                              : scheme.onSurface,
-                        ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                'PFA Pharmacy',
+                style: TextStyle(
+                  color: Aurora.teal,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: Colors.white38,
+        fontSize: 10.5,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 1.4,
+      ),
+    );
+  }
+}
+
+class _QuickAdd extends StatelessWidget {
+  const _QuickAdd();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 44,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: <Color>[Aurora.teal, Aurora.indigo],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Aurora.indigo.withValues(alpha: 0.4),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => context.go('/new'),
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 6),
+                Text(
+                  'New invoice',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13.5,
                   ),
                 ),
               ],
@@ -211,4 +281,295 @@ class _SidebarItem extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SidebarFooter extends StatelessWidget {
+  const _SidebarFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: const Row(
+        children: <Widget>[
+          Icon(
+            Icons.cloud_off_outlined,
+            size: 15,
+            color: Aurora.emerald,
+          ),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Offline · data stays on this PC',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 11.5,
+                height: 1.25,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SidebarItem extends StatefulWidget {
+  const _SidebarItem({
+    required this.data,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _NavItemData data;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  State<_SidebarItem> createState() => _SidebarItemState();
+}
+
+class _SidebarItemState extends State<_SidebarItem> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = widget.selected;
+    final accent = widget.data.accent;
+    final lit = selected || _hovered;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+          decoration: BoxDecoration(
+            color: selected
+                ? Colors.white.withValues(alpha: 0.13)
+                : Colors.white.withValues(alpha: _hovered ? 0.07 : 0),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected
+                  ? accent.withValues(alpha: 0.55)
+                  : Colors.transparent,
+            ),
+            boxShadow: selected
+                ? <BoxShadow>[
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.22),
+                      blurRadius: 14,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            children: <Widget>[
+              // The accent bar grows out of the side of the active page.
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                width: 3,
+                height: selected ? 22 : 0,
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(3),
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.8),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+              ),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: selected ? 11 : 0,
+              ),
+              AnimatedScale(
+                duration: const Duration(milliseconds: 200),
+                scale: selected ? 1.12 : 1,
+                child: Icon(
+                  selected ? widget.data.selectedIcon : widget.data.icon,
+                  size: 20,
+                  color: selected
+                      ? accent
+                      : Colors.white.withValues(alpha: _hovered ? 0.85 : 0.6),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  widget.data.label,
+                  style: TextStyle(
+                    color: selected
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.72),
+                    fontSize: 14,
+                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    letterSpacing: 0.1,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (selected)
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: accent.withValues(alpha: 0.9),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shared helper: a soft radial glow, used behind headers and empty states.
+class SoftGlow extends StatelessWidget {
+  const SoftGlow({
+    super.key,
+    required this.child,
+    required this.color,
+    this.radius = 180,
+    this.opacity = 0.3,
+  });
+
+  final Widget child;
+  final Color color;
+  final double radius;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        Positioned(
+          top: -radius * 0.4,
+          right: -radius * 0.3,
+          child: IgnorePointer(
+            child: Container(
+              width: radius,
+              height: radius,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: <Color>[
+                    color.withValues(alpha: opacity),
+                    color.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        child,
+      ],
+    );
+  }
+}
+
+/// A drifting, shimmering dot field for hero areas. Bounded in time so the
+/// window eventually holds still.
+class ParticleDrift extends StatefulWidget {
+  const ParticleDrift({
+    super.key,
+    required this.child,
+    this.count = 14,
+    this.color = Colors.white,
+  });
+
+  final Widget child;
+  final int count;
+  final Color color;
+
+  @override
+  State<ParticleDrift> createState() => _ParticleDriftState();
+}
+
+class _ParticleDriftState extends State<ParticleDrift>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _t = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2200),
+  )..forward();
+
+  @override
+  void dispose() {
+    _t.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        Positioned.fill(
+          child: IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _t,
+              builder: (context, _) => CustomPaint(
+                painter: _ParticlePainter(
+                  t: Curves.easeOut.transform(_t.value),
+                  count: widget.count,
+                  color: widget.color,
+                ),
+              ),
+            ),
+          ),
+        ),
+        widget.child,
+      ],
+    );
+  }
+}
+
+class _ParticlePainter extends CustomPainter {
+  _ParticlePainter({required this.t, required this.count, required this.color});
+
+  final double t;
+  final int count;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    for (var i = 0; i < count; i++) {
+      final seedA = math.sin(i * 12.9898) * 43758.5453;
+      final a = seedA - seedA.floorToDouble();
+      final seedB = math.sin(i * 78.233) * 43758.5453;
+      final b = seedB - seedB.floorToDouble();
+      final seedC = math.sin(i * 39.425) * 43758.5453;
+      final c = seedC - seedC.floorToDouble();
+
+      final dx = size.width * (a * 0.9 + 0.05 * t);
+      final dy = size.height * (b * 0.9 - 0.08 * t);
+      final r = 0.8 + 2.2 * c;
+      final opacity = (0.25 + 0.5 * c) * (0.5 + 0.5 * math.sin(t * math.pi * 2 + i));
+      canvas.drawCircle(
+        Offset(dx, dy),
+        r,
+        Paint()..color = color.withValues(alpha: opacity.clamp(0.0, 1.0)),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ParticlePainter old) => old.t != t;
 }

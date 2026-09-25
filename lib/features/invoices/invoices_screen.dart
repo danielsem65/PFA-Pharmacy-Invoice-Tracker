@@ -8,7 +8,9 @@ import '../../data/receipt_storage.dart';
 import '../../models/supplier.dart';
 import '../../models/supplier_invoice.dart';
 import '../../widgets/export_actions.dart';
+import '../../widgets/aurora_background.dart';
 import '../../widgets/more_menu_button.dart';
+import '../../widgets/page_header.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/toast.dart';
@@ -97,30 +99,15 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 16, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Invoices',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${invoices.length} ${invoices.length == 1 ? 'invoice' : 'invoices'} · ${DateFormat('EEEE, d MMMM yyyy').format(now)}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+            child: PageHeader(
+              title: 'Invoices',
+              subtitle:
+                  '${invoices.length} ${invoices.length == 1 ? 'invoice' : 'invoices'} · ${DateFormat('EEEE, d MMMM yyyy').format(now)}',
+              icon: Icons.receipt_long,
+              accentIndex: 0,
+              actions: <Widget>[
                 MoreMenuButton(),
-                const SizedBox(width: 8),
                 FilledButton.icon(
                   onPressed: () => context.go('/new'),
                   icon: const Icon(Icons.add),
@@ -130,119 +117,140 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 14, 16, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 4,
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      hintText: 'Search invoices…',
-                      prefixIcon: Icon(Icons.search),
-                      isDense: true,
-                    ),
-                    onChanged: (v) => setState(() => _query = v),
+            padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
+            child: FadeSlideIn(
+              delay: const Duration(milliseconds: 70),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .surface
+                      .withValues(alpha: 0.55),
+                  border: Border.all(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .outlineVariant
+                        .withValues(alpha: 0.5),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Flexible(
-                  flex: 1,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .outlineVariant
-                              .withValues(alpha: 0.7),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: TextField(
+                        decoration: const InputDecoration(
+                          hintText: 'Search invoices…',
+                          prefixIcon: Icon(Icons.search),
+                          isDense: true,
                         ),
-                        borderRadius: BorderRadius.circular(14),
+                        onChanged: (v) => setState(() => _query = v),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: DropdownButton<String?>(
-                        value: _filterSupplierId,
-                        hint: const Text('All suppliers'),
-                        underline: const SizedBox.shrink(),
-                        borderRadius: BorderRadius.circular(14),
-                        items: [
-                          const DropdownMenuItem<String?>(
-                            value: null,
-                            child: Text('All suppliers'),
-                          ),
-                          for (final Supplier s in suppliers)
-                            DropdownMenuItem<String?>(
-                              value: s.id,
-                              child: Text(s.name),
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      flex: 1,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .outlineVariant
+                                  .withValues(alpha: 0.7),
                             ),
-                        ],
-                        onChanged: (v) =>
-                            setState(() => _filterSupplierId = v),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  flex: 1,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      key: const Key('status-filter'),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .outlineVariant
-                              .withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 12),
+                          child: DropdownButton<String?>(
+                            value: _filterSupplierId,
+                            hint: const Text('All suppliers'),
+                            underline: const SizedBox.shrink(),
+                            borderRadius: BorderRadius.circular(14),
+                            items: [
+                              const DropdownMenuItem<String?>(
+                                value: null,
+                                child: Text('All suppliers'),
+                              ),
+                              for (final Supplier s in suppliers)
+                                DropdownMenuItem<String?>(
+                                  value: s.id,
+                                  child: Text(s.name),
+                                ),
+                            ],
+                            onChanged: (v) =>
+                                setState(() => _filterSupplierId = v),
+                          ),
                         ),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: DropdownButton<_FilterStatus>(
-                        value: _filterStatus,
-                        underline: const SizedBox.shrink(),
-                        borderRadius: BorderRadius.circular(14),
-                        items: const [
-                          DropdownMenuItem<_FilterStatus>(
-                            value: _FilterStatus.all,
-                            child: Text('All statuses'),
-                          ),
-                          DropdownMenuItem<_FilterStatus>(
-                            value: _FilterStatus.outstanding,
-                            child: Text('Outstanding'),
-                          ),
-                          DropdownMenuItem<_FilterStatus>(
-                            value: _FilterStatus.overdue,
-                            child: Text('Overdue'),
-                          ),
-                          DropdownMenuItem<_FilterStatus>(
-                            value: _FilterStatus.paid,
-                            child: Text('Paid'),
-                          ),
-                        ],
-                        onChanged: (v) => setState(
-                            () => _filterStatus = v ?? _FilterStatus.all),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      flex: 1,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          key: const Key('status-filter'),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .outlineVariant
+                                  .withValues(alpha: 0.7),
+                            ),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 12),
+                          child: DropdownButton<_FilterStatus>(
+                            value: _filterStatus,
+                            underline: const SizedBox.shrink(),
+                            borderRadius: BorderRadius.circular(14),
+                            items: const [
+                              DropdownMenuItem<_FilterStatus>(
+                                value: _FilterStatus.all,
+                                child: Text('All statuses'),
+                              ),
+                              DropdownMenuItem<_FilterStatus>(
+                                value: _FilterStatus.outstanding,
+                                child: Text('Outstanding'),
+                              ),
+                              DropdownMenuItem<_FilterStatus>(
+                                value: _FilterStatus.overdue,
+                                child: Text('Overdue'),
+                              ),
+                              DropdownMenuItem<_FilterStatus>(
+                                value: _FilterStatus.paid,
+                                child: Text('Paid'),
+                              ),
+                            ],
+                            onChanged: (v) => setState(
+                                () => _filterStatus = v ?? _FilterStatus.all),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      tooltip: 'Select invoices',
+                      onPressed: sorted.isEmpty
+                          ? null
+                          : () => setState(() {
+                                _selectionMode = true;
+                                if (_selected.isEmpty) {
+                                  _selected.add(sorted.first.id);
+                                }
+                              }),
+                      icon: const Icon(Icons.checklist_rounded),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  tooltip: 'Select invoices',
-                  onPressed: sorted.isEmpty
-                      ? null
-                      : () => setState(() {
-                            _selectionMode = true;
-                            if (_selected.isEmpty) {
-                              _selected.add(sorted.first.id);
-                            }
-                          }),
-                  icon: const Icon(Icons.checklist_rounded),
-                ),
-              ],
+              ),
             ),
           ),
           if (_selectionMode)
@@ -272,7 +280,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
                   : () => _confirmBulkDelete(context, sorted),
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 16, 0),
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
             child: Row(
               children: [
                 Expanded(
@@ -281,33 +289,37 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
                     value: formatPesewas(totalOwing),
                     icon: Icons.account_balance_wallet_outlined,
                     gradient: StatCard.primary,
+                    delay: const Duration(milliseconds: 120),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: StatCard(
                     label: 'Overdue',
                     value: formatPesewas(overdue),
                     icon: Icons.warning_amber_rounded,
                     gradient: StatCard.danger,
+                    delay: const Duration(milliseconds: 190),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: StatCard(
                     label: 'Unpaid',
                     value: '$openCount',
                     icon: Icons.pending_actions_outlined,
                     gradient: StatCard.neutral,
+                    delay: const Duration(milliseconds: 260),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: StatCard(
                     label: 'Invoices',
                     value: '${allVisible.length}',
                     icon: Icons.receipt_long_outlined,
                     gradient: StatCard.primary,
+                    delay: const Duration(milliseconds: 330),
                   ),
                 ),
               ],
@@ -432,41 +444,54 @@ class _InvoiceTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
+      margin: const EdgeInsets.fromLTRB(24, 0, 24, 20),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(22),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.white.withValues(alpha: 0.72),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.6),
+          color: scheme.outlineVariant.withValues(alpha: 0.5),
         ),
-      ),
-      margin: const EdgeInsets.fromLTRB(24, 0, 16, 20),
-      child: Column(
-        children: [
-          _HeaderRow(selectionMode: selectionMode),
-          const Divider(height: 1),
-          Expanded(
-            child: ListView.builder(
-              itemCount: invoices.length,
-              itemBuilder: (context, index) {
-                final inv = invoices[index];
-                return _InvoiceRow(
-                  invoice: inv,
-                  supplierName:
-                      supplierNames[inv.supplierId] ?? 'Unknown',
-                  now: now,
-                  selectionMode: selectionMode,
-                  selected: selected.contains(inv.id),
-                  onTap: () => onOpen(inv.id),
-                  onToggle: () => onToggle(inv.id),
-                  onSecondaryTap: () {
-                    if (!selectionMode) onEnterSelection(inv.id);
-                  },
-                );
-              },
-            ),
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: scheme.primary.withValues(alpha: isDark ? 0.18 : 0.10),
+            blurRadius: 26,
+            offset: const Offset(0, 12),
           ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Column(
+          children: [
+            _HeaderRow(selectionMode: selectionMode),
+            Expanded(
+              child: ListView.builder(
+                itemCount: invoices.length,
+                itemBuilder: (context, index) {
+                  final inv = invoices[index];
+                  return _InvoiceRow(
+                    invoice: inv,
+                    supplierName:
+                        supplierNames[inv.supplierId] ?? 'Unknown',
+                    now: now,
+                    selectionMode: selectionMode,
+                    selected: selected.contains(inv.id),
+                    onTap: () => onOpen(inv.id),
+                    onToggle: () => onToggle(inv.id),
+                    onSecondaryTap: () {
+                      if (!selectionMode) onEnterSelection(inv.id);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -479,10 +504,11 @@ class _HeaderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final style = Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          color: scheme.onSurfaceVariant,
           fontWeight: FontWeight.w800,
-          letterSpacing: 0.4,
+          letterSpacing: 0.6,
         );
     Widget cell(String label, {double flex = 1, TextAlign align = TextAlign.left}) {
       return Expanded(
@@ -500,17 +526,30 @@ class _HeaderRow extends StatelessWidget {
       );
     }
 
-    return Row(
-      children: [
-        if (selectionMode) const SizedBox(width: 18),
-        cell('Supplier', flex: 22),
-        cell('Invoice No', flex: 13),
-        cell('Due', flex: 10),
-        cell('Total (GH₵)', flex: 10, align: TextAlign.right),
-        cell('Paid (GH₵)', flex: 10, align: TextAlign.right),
-        cell('Balance (GH₵)', flex: 10, align: TextAlign.right),
-        cell('Status', flex: 12),
-      ],
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: <Color>[
+            scheme.primary.withValues(alpha: 0.10),
+            scheme.primary.withValues(alpha: 0.04),
+          ],
+        ),
+        border: Border(
+          bottom: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+        ),
+      ),
+      child: Row(
+        children: [
+          if (selectionMode) const SizedBox(width: 18),
+          cell('Supplier', flex: 22),
+          cell('Invoice No', flex: 13),
+          cell('Due', flex: 10),
+          cell('Total (GH₵)', flex: 10, align: TextAlign.right),
+          cell('Paid (GH₵)', flex: 10, align: TextAlign.right),
+          cell('Balance (GH₵)', flex: 10, align: TextAlign.right),
+          cell('Status', flex: 12),
+        ],
+      ),
     );
   }
 }
@@ -567,48 +606,66 @@ class _InvoiceRow extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           onSecondaryTap: onSecondaryTap,
-          hoverColor: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          child: Row(
+          hoverColor: scheme.primary.withValues(alpha: 0.05),
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              if (selectionMode)
-                Padding(
-                  padding: const EdgeInsets.only(left: 6, right: 2),
-                  child: Checkbox(
-                    value: selected,
-                    onChanged: (_) => onToggle(),
+              // A colour stripe down the edge, so the state of an invoice can
+              // be read without reading the pill.
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: SizedBox(
+                  width: 3,
+                  child: ColoredBox(
+                    color: StatusBadge.colorOf(status).withValues(alpha: 0.85),
                   ),
                 ),
-              cell(supplierName, flex: 22,
-                  style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-              cell(invoice.invoiceNumber, flex: 13,
-                  style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-              cell(formatDate(invoice.dueDate), flex: 10),
-              cell(
-                formatPesewas(invoice.totalPesewas),
-                flex: 10,
-                align: TextAlign.right,
-                style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
-              cell(formatPesewas(invoice.amountPaidPesewas), flex: 10,
-                  align: TextAlign.right),
-              cell(
-                formatPesewas(invoice.balancePesewas),
-                flex: 10,
-                align: TextAlign.right,
-                style: texts.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: invoice.owesMoney ? scheme.error : scheme.onSurface,
-                ),
-              ),
-              Expanded(
-                flex: 12,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: StatusBadge(status: status),
+              Row(
+                children: [
+                  if (selectionMode)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 14, right: 2),
+                      child: Checkbox(
+                        value: selected,
+                        onChanged: (_) => onToggle(),
+                      ),
+                    ),
+                  cell(supplierName, flex: 22,
+                      style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  cell(invoice.invoiceNumber, flex: 13,
+                      style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                  cell(formatDate(invoice.dueDate), flex: 10),
+                  cell(
+                    formatPesewas(invoice.totalPesewas),
+                    flex: 10,
+                    align: TextAlign.right,
+                    style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
                   ),
-                ),
+                  cell(formatPesewas(invoice.amountPaidPesewas), flex: 10,
+                      align: TextAlign.right),
+                  cell(
+                    formatPesewas(invoice.balancePesewas),
+                    flex: 10,
+                    align: TextAlign.right,
+                    style: texts.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: invoice.owesMoney ? scheme.error : scheme.onSurface,
+                    ),
+                  ),
+                  Expanded(
+                    flex: 12,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: StatusBadge(status: status),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -641,25 +698,32 @@ class _SelectionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 16, 0),
-      child: Material(
-        color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+      child: FadeSlideIn(
+        child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: <Color>[
+                scheme.primary.withValues(alpha: 0.16),
+                scheme.primary.withValues(alpha: 0.08),
+              ],
+            ),
+            border: Border.all(color: scheme.primary.withValues(alpha: 0.28)),
+          ),
           child: Row(
             children: [
               IconButton(
                 tooltip: 'Exit selection',
                 onPressed: onClose,
-                icon: Icon(Icons.close, color: scheme.onPrimaryContainer),
+                icon: const Icon(Icons.close),
               ),
               Expanded(
                 child: Text(
                   count == 0 ? 'Select invoices' : '$count selected',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: scheme.onPrimaryContainer,
                       ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -668,28 +732,22 @@ class _SelectionBar extends StatelessWidget {
               IconButton(
                 tooltip: 'Select all',
                 onPressed: onSelectAll,
-                icon: Icon(
-                  allSelected ? Icons.deselect : Icons.select_all,
-                  color: scheme.onPrimaryContainer,
-                ),
+                icon: Icon(allSelected ? Icons.deselect : Icons.select_all),
               ),
               IconButton(
                 tooltip: 'Export CSV',
                 onPressed: onExportCsv,
-                icon: Icon(Icons.table_chart_outlined, color: scheme.onPrimaryContainer),
+                icon: const Icon(Icons.table_chart_outlined),
               ),
               IconButton(
                 tooltip: 'Export backup',
                 onPressed: onExportZip,
-                icon: Icon(Icons.archive_outlined, color: scheme.onPrimaryContainer),
+                icon: const Icon(Icons.archive_outlined),
               ),
               IconButton(
                 tooltip: 'Delete',
                 onPressed: onDelete,
-                icon: Icon(
-                  Icons.delete_outline,
-                  color: scheme.onPrimaryContainer,
-                ),
+                icon: const Icon(Icons.delete_outline),
               ),
             ],
           ),
@@ -706,34 +764,14 @@ class _EmptyInvoices extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final texts = Theme.of(context).textTheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.receipt_long_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-            const SizedBox(height: 12),
-            Text('No invoices yet', style: texts.titleMedium),
-            const SizedBox(height: 4),
-            Text(
-              'Record invoices you buy medicines on from your suppliers.',
-              style: texts.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add),
-              label: const Text('Add invoice'),
-            ),
-          ],
-        ),
+    return EmptyState(
+      icon: Icons.receipt_long_outlined,
+      title: 'No invoices yet',
+      message: 'Record invoices you buy medicines on from your suppliers.',
+      action: FilledButton.icon(
+        onPressed: onAdd,
+        icon: const Icon(Icons.add),
+        label: const Text('Add invoice'),
       ),
     );
   }
