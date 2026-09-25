@@ -33,11 +33,16 @@ class _AuroraBackgroundState extends State<AuroraBackground>
     duration: const Duration(milliseconds: 2600),
   );
 
+  bool _started = false;
+
   @override
-  void initState() {
-    super.initState();
-    final still = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    if (still) {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    // Asked here rather than in initState: reading an inherited widget is only
+    // allowed once the element is attached to the tree.
+    if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
       _drift.value = 1;
     } else {
       _drift.forward();
@@ -390,9 +395,13 @@ class _FadeSlideInState extends State<FadeSlideIn>
     duration: const Duration(milliseconds: 460),
   );
 
+  bool _started = false;
+
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
     if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
       _in.value = 1;
     } else if (widget.delay == Duration.zero) {
