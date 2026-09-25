@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../models/supplier.dart';
+import '../../widgets/aurora_background.dart';
 import '../../widgets/page_header.dart';
 import '../invoices/invoices_controller.dart';
 import 'suppliers_controller.dart';
