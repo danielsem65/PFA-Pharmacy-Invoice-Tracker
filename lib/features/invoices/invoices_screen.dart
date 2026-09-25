@@ -14,6 +14,8 @@ import '../../widgets/status_badge.dart';
 import '../suppliers/suppliers_controller.dart';
 import 'invoices_controller.dart';
 
+enum _FilterStatus { all, outstanding, overdue, paid }
+
 class InvoicesScreen extends ConsumerStatefulWidget {
   const InvoicesScreen({super.key});
 
@@ -23,6 +25,7 @@ class InvoicesScreen extends ConsumerStatefulWidget {
 
 class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
   String? _filterSupplierId;
+  _FilterStatus _filterStatus = _FilterStatus.all;
   String _query = '';
   final Set<String> _selected = {};
   bool _selectionMode = false;
@@ -44,6 +47,19 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
     final allVisible = invoices.where((i) {
       if (_filterSupplierId != null && i.supplierId != _filterSupplierId) {
         return false;
+      }
+      switch (_filterStatus) {
+        case _FilterStatus.all:
+          break;
+        case _FilterStatus.outstanding:
+          if (i.statusAt(now) == InvoiceStatus.paid) return false;
+          break;
+        case _FilterStatus.overdue:
+          if (i.statusAt(now) != InvoiceStatus.overdue) return false;
+          break;
+        case _FilterStatus.paid:
+          if (i.statusAt(now) != InvoiceStatus.paid) return false;
+          break;
       }
       if (q.isNotEmpty) {
         final hay = '${nameOf(i.supplierId)} ${i.invoiceNumber} '
@@ -155,6 +171,45 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
                         ),
                     ],
                     onChanged: (v) => setState(() => _filterSupplierId = v),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  key: const Key('status-filter'),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outlineVariant
+                          .withValues(alpha: 0.7),
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: DropdownButton<_FilterStatus>(
+                    value: _filterStatus,
+                    underline: const SizedBox.shrink(),
+                    borderRadius: BorderRadius.circular(14),
+                    items: const [
+                      DropdownMenuItem<_FilterStatus>(
+                        value: _FilterStatus.all,
+                        child: Text('All statuses'),
+                      ),
+                      DropdownMenuItem<_FilterStatus>(
+                        value: _FilterStatus.outstanding,
+                        child: Text('Outstanding'),
+                      ),
+                      DropdownMenuItem<_FilterStatus>(
+                        value: _FilterStatus.overdue,
+                        child: Text('Overdue'),
+                      ),
+                      DropdownMenuItem<_FilterStatus>(
+                        value: _FilterStatus.paid,
+                        child: Text('Paid'),
+                      ),
+                    ],
+                    onChanged: (v) =>
+                        setState(() => _filterStatus = v ?? _FilterStatus.all),
                   ),
                 ),
                 const SizedBox(width: 8),

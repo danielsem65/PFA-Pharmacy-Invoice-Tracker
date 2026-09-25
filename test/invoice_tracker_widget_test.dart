@@ -100,6 +100,71 @@ void main() {
       expect(find.text('INV-001'), findsNothing);
     });
 
+    testWidgets('filters invoices by status', (tester) async {
+      final store = InMemoryLocalStore(
+        suppliers: [
+          supplier('s1', 'Pharma Co'),
+        ],
+        invoices: [
+          invoice(
+            id: 'i1',
+            supplierId: 's1',
+            invoiceNumber: 'INV-001',
+            dueDate: DateTime(2000, 1, 31),
+          ),
+          invoice(
+            id: 'i2',
+            supplierId: 's1',
+            invoiceNumber: 'INV-002',
+            amountPesewas: 5000,
+            amountPaidPesewas: 5000,
+            dueDate: DateTime(2030, 1, 31),
+          ),
+          invoice(
+            id: 'i3',
+            supplierId: 's1',
+            invoiceNumber: 'INV-003',
+            amountPesewas: 7000,
+            dueDate: DateTime(2030, 1, 31),
+          ),
+        ],
+      );
+      await pumpApp(tester, store);
+
+      expect(find.text('INV-001'), findsOneWidget);
+      expect(find.text('INV-002'), findsOneWidget);
+      expect(find.text('INV-003'), findsOneWidget);
+
+      final filter = find.byKey(const Key('status-filter'));
+
+      await tester.tap(filter);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Overdue').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('INV-001'), findsOneWidget);
+      expect(find.text('INV-002'), findsNothing);
+      expect(find.text('INV-003'), findsNothing);
+
+      await tester.tap(filter);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Paid').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('INV-001'), findsNothing);
+      expect(find.text('INV-002'), findsOneWidget);
+      expect(find.text('INV-003'), findsNothing);
+
+      await tester.tap(filter);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Outstanding').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('INV-001'), findsOneWidget);
+      expect(find.text('INV-002'), findsNothing);
+      expect(find.text('INV-003'), findsOneWidget);
+    });
+
     testWidgets('adds an invoice through the form', (tester) async {
       final store = InMemoryLocalStore(
         suppliers: [supplier('s1', 'Pharma Co')],
