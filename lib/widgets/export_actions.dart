@@ -176,7 +176,7 @@ Future<void> exportProductsCsv(
   WidgetRef ref, {
   List<Product>? productScope,
 }) async {
-  final products = productScope ?? ref.read(productsProvider);
+  final products = productScope ?? ref.read(productsProvider) ?? const [];
   await _writeCsv(
     context,
     'InvoiceTracker_Products_${_stamp()}.csv',

@@ -144,40 +144,27 @@ void main() {
       final invoices = workbook.sheet('Invoices');
       final items = workbook.sheet('Invoice Items');
 
-      // Pretend the items are on the same sheet, as they are on a hand-kept
-      // ledger: invoice details from one sheet, item columns from the other.
+      // A hand-kept ledger carries the invoice details and the item details on
+      // the same row, so join the two sheets into one the way such a ledger
+      // looks: the invoice's columns, then the item's columns.
       final merged = XlsxSheet('merged', [
-        ...invoices.rows,
-        for (final row in items.rows.skip(1)) [
-          row[0],
-          row[1],
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          row[2],
-          row[3],
-          row[4],
-          row[5],
-        ],
+        [...invoices.rows.first, ...items.rows.first.skip(2)],
+        for (final row in items.rows.skip(1))
+          [...invoices.rows[1], ...row.skip(2)],
       ]);
 
+      // The item columns sit after the sixteen invoice columns; this is what
+      // the user sees and confirms on the mapping step.
       final mapping = ImportMapping({
         ImportField.supplier: 0,
         ImportField.invoiceNumber: 1,
-        ImportField.amount: 8,
         ImportField.invoiceDate: 4,
-        ImportField.product: 13,
-        ImportField.boxes: 14,
-        ImportField.piecesPerBox: 15,
-        ImportField.pricePerBox: 16,
+        ImportField.taxPercent: 7,
+        ImportField.amount: 8,
+        ImportField.product: 16,
+        ImportField.boxes: 17,
+        ImportField.piecesPerBox: 18,
+        ImportField.pricePerBox: 19,
       });
 
       final plan = buildImportPlan(
@@ -189,14 +176,87 @@ void main() {
       );
 
       expect(plan.invoices, hasLength(1));
-      final lines = plan.invoices.single.lines;
+      final imported = plan.invoices.single;
+      final lines = imported.lines;
       expect(lines, hasLength(2));
       expect(lines.first.name, 'Artemether/Lumefantrine');
       expect(lines.first.boxes, 2);
       expect(lines.first.piecesPerBox, 12);
       expect(lines.first.pricePerBoxPesewas, 9000);
       expect(lines.last.name, 'ORS Sachet');
+      expect(lines.last.boxes, 10);
+      // The net amount and the rate are read apart, so the total the app works
+      // out is the total the sheet wrote.
+      expect(imported.amountPesewas, 450000);
+      expect(imported.taxRatePercent, 15);
+      expect(imported.totalPesewas, 517500);
+    });
+
+    test('takes VAT back out of a total that already includes it', () {
+      final sheet = XlsxSheet('Sheet1', const [
+        ['Supplier', 'Invoice No', 'Date', 'Tax %', 'Total'],
+        ['Medi Trust', 'INV-77', '04/03/2026', '15', '5175.00'],
+      ]);
+      final plan = buildImportPlan(
+        sheet: sheet,
+        headerRowIndex: 0,
+        mapping: detectMapping(const [
+          'Supplier',
+          'Invoice No',
+          'Date',
+          'Tax %',
+          'Total',
+        ]),
+        existingSuppliers: const [],
+        existingInvoices: const [],
+      );
+
+      final imported = plan.invoices.single;
+      expect(imported.taxRatePercent, 15);
+      // 5175.00 less 15% VAT is the 4500.00 the supplier billed.
+      expect(imported.amountPesewas, 450000);
+      expect(imported.totalPesewas, 517500);
+    });
+
+    test('leaves the amount alone when the sheet gives no rate to remove', () {
+      final sheet = XlsxSheet('Sheet1', const [
+        ['Supplier', 'Invoice No', 'Date', 'Total'],
+        ['Medi Trust', 'INV-77', '04/03/2026', '4500.00'],
+      ]);
+      final plan = buildImportPlan(
+        sheet: sheet,
+        headerRowIndex: 0,
+        mapping: detectMapping(const [
+          'Supplier',
+          'Invoice No',
+          'Date',
+          'Total',
+        ]),
+        existingSuppliers: const [],
+        existingInvoices: const [],
+      );
       expect(plan.invoices.single.amountPesewas, 450000);
+    });
+
+    test('refuses a VAT column that holds an amount rather than a rate', () {
+      final sheet = XlsxSheet('Sheet1', const [
+        ['Supplier', 'Invoice No', 'Date', 'VAT (GH₵)', 'Total'],
+        ['Medi Trust', 'INV-77', '04/03/2026', '675.00', '5175.00'],
+      ]);
+      final plan = buildImportPlan(
+        sheet: sheet,
+        headerRowIndex: 0,
+        mapping: detectMapping(const [
+          'Supplier',
+          'Invoice No',
+          'Date',
+          'VAT (GH₵)',
+          'Total',
+        ]),
+        existingSuppliers: const [],
+        existingInvoices: const [],
+      );
+      expect(plan.invoices.single.taxRatePercent, 0);
     });
   });
 

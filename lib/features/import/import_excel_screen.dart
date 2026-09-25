@@ -661,7 +661,7 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
       });
     } on FormatException catch (e) {
       setState(() {
-        _readError = '${e.message}';
+        _readError = e.message;
         _workbook = null;
         _fileName = null;
       });
@@ -824,7 +824,11 @@ class _Dropdown<T> extends StatelessWidget {
           isExpanded: true,
           isDense: true,
           items: items,
-          onChanged: onChanged,
+          onChanged: onChanged == null
+              ? null
+              : (selected) {
+                  if (selected is T) onChanged!(selected);
+                },
         ),
       ),
     );

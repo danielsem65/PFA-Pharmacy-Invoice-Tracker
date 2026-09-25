@@ -107,6 +107,13 @@ const _fields = <ImportField, _FieldInfo>{
   ImportField.amount: _FieldInfo(
     'Invoice amount',
     [
+      // A subtotal is the net figure the app stores, so it is preferred over a
+      // total that already includes VAT.
+      'subtotal',
+      'sub total',
+      'net total',
+      'net amount',
+      'total before tax',
       'invoice total',
       'total amount',
       'amount due',
@@ -372,7 +379,6 @@ InvoiceImportPlan buildImportPlan({
     if (isTotalLabel(supplierName)) continue;
 
     final number = reader.text(ImportField.invoiceNumber);
-    final date = reader.date(ImportField.invoiceDate);
     final key = number.isEmpty
         ? '${supplierName.toLowerCase()}|$r'
         : '${supplierName.toLowerCase()}|${number.toLowerCase()}';
@@ -409,6 +415,12 @@ InvoiceImportPlan buildImportPlan({
   final invoices = <SupplierInvoice>[];
   var skippedExisting = 0;
   final stamp = DateTime.now().microsecondsSinceEpoch;
+  final amountIncludesTax = _amountIncludesTax(
+    headerRowIndex < sheet.rowCount
+        ? sheet.rowAt(headerRowIndex)
+        : const <Object?>[],
+    mapping.columnOf(ImportField.amount),
+  );
 
   for (final key in order) {
     final group = groups[key]!;
@@ -428,9 +440,15 @@ InvoiceImportPlan buildImportPlan({
     }
 
     // A line-item sheet often carries no invoice total, so add the items up.
-    final amount = group.hasAmount
+    var amount = group.hasAmount
         ? group.amountPesewas
         : group.lines.fold(0, (sum, l) => sum + l.totalPesewas);
+    // The app adds VAT to the amount it is handed, so when the sheet quotes a
+    // total that already includes VAT the rate is taken back out first,
+    // otherwise the invoice is inflated by the tax twice.
+    if (amountIncludesTax && group.hasAmount && group.taxPercent > 0) {
+      amount = (amount / (1 + group.taxPercent / 100)).round();
+    }
     if (amount == 0 && group.lines.isEmpty) {
       problems.add(
         ImportProblem(group.firstRow, 'no amount and no items'),
@@ -475,6 +493,23 @@ InvoiceImportPlan buildImportPlan({
     skippedExisting: skippedExisting,
     rowsRead: rowsRead,
   );
+}
+
+/// True when the mapped amount column looks like a figure that already
+/// includes VAT, as "Total" usually does on a supplier's sheet. A column
+/// marked as a subtotal, a net figure or a before-tax figure does not.
+bool _amountIncludesTax(List<Object?> headerRow, int? amountColumn) {
+  if (amountColumn == null || amountColumn >= headerRow.length) return false;
+  final heading = normalizeHeader(displayText(headerRow[amountColumn]));
+  if (heading.isEmpty) return false;
+  if (heading.contains('subtotal') ||
+      heading.contains('sub total') ||
+      heading.contains('net') ||
+      heading.contains('before tax') ||
+      heading.contains('exclusive')) {
+    return false;
+  }
+  return heading.contains('total') || heading.contains('amount');
 }
 
 String _nameOf(String supplierId, List<Supplier> suppliers) {
@@ -541,7 +576,10 @@ class _Group {
       if (value != null) paidPesewas = (value * 100).round();
     }
     if (taxPercent == 0) {
-      taxPercent = reader.number(ImportField.taxPercent) ?? 0;
+      // A VAT column holding an amount rather than a rate would otherwise
+      // become a tax of several hundred per cent.
+      final rate = reader.number(ImportField.taxPercent) ?? 0;
+      if (rate > 0 && rate <= 100) taxPercent = rate;
     }
     if (paymentMethod == 'Cash') {
       final method = matchPaymentMethod(reader.text(ImportField.paymentMethod));

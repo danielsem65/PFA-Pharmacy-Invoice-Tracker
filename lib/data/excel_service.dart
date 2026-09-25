@@ -1,6 +1,5 @@
-import 'dart:ui' show InlineSpan;
-
 import 'package:excel/excel.dart';
+import 'package:flutter/widgets.dart' show InlineSpan;
 import 'package:intl/intl.dart';
 
 import '../models/product.dart';
@@ -84,7 +83,7 @@ List<List<Object?>> _readSheet(Sheet sheet) {
     for (var r = 0; r < sheet.maxRows; r++)
       [
         for (var c = 0; c < width; c++) plainValue(sheet.cell(
-          CellIndex.indexByColumnRow(c, r),
+          CellIndex.indexByColumnRow(columnIndex: c, rowIndex: r),
         ).value),
       ],
   ];
@@ -125,7 +124,7 @@ final _headerStyle = CellStyle(
   bold: true,
   fontColorHex: ExcelColor.white,
   backgroundColorHex: ExcelColor.cyan800,
-  verticalAlign: VerticalAlign.center,
+  verticalAlign: VerticalAlign.Center,
 );
 
 final _moneyStyle = CellStyle(
@@ -349,7 +348,8 @@ void _buildSummarySheet(
 
   final title = sheet.maxRows;
   sheet.appendRow([TextCellValue('PFA Pharmacy Invoice Tracker')]);
-  sheet.cell(CellIndex.indexByColumnRow(0, title)).cellStyle = _titleStyle;
+  sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: title))
+      .cellStyle = _titleStyle;
   line('Exported', DateFormat('dd/MM/yyyy HH:mm').format(now));
   line('Invoices', '${invoices.length}');
   line('Suppliers', '${suppliers.length}');
