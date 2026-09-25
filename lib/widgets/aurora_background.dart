@@ -209,8 +209,13 @@ class _HoverLiftState extends State<HoverLift> {
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
           transform: Matrix4.identity()
-            ..translate(0.0, hovered ? -widget.lift : 0.0)
-            ..scale(hovered && !_pressed ? widget.scale : 1.0),
+            ..translateByDouble(0.0, hovered ? -widget.lift : 0.0, 0.0, 1.0)
+            ..scaleByDouble(
+              hovered && !_pressed ? widget.scale : 1.0,
+              hovered && !_pressed ? widget.scale : 1.0,
+              1.0,
+              1.0,
+            ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             boxShadow: hovered && widget.shadow != null

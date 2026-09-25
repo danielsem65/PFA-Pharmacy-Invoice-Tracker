@@ -341,7 +341,6 @@ class _SidebarItemState extends State<_SidebarItem> {
   Widget build(BuildContext context) {
     final selected = widget.selected;
     final accent = widget.data.accent;
-    final lit = selected || _hovered;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),

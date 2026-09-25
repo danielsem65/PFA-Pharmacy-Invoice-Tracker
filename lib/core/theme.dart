@@ -387,6 +387,7 @@ class SoftCardBorder extends OutlinedBorder {
 
   final double radius;
   final Color fill;
+  @override
   final BorderSide side;
   final Color shadowColor;
   final double shadowBlur;
