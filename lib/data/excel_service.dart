@@ -1,5 +1,4 @@
 import 'package:excel/excel.dart';
-import 'package:flutter/widgets.dart' show InlineSpan;
 import 'package:intl/intl.dart';
 
 import '../models/product.dart';
@@ -107,18 +106,9 @@ Object? plainValue(CellValue? cell) {
   };
 }
 
-String textValue(TextCellValue cell) {
-  final span = cell.value;
-  final text = span.text;
-  if (text != null && text.isNotEmpty) return text;
-  // Spans created from rich text keep their characters in child spans.
-  final buffer = StringBuffer();
-  span.visitChildren((InlineSpan child) {
-    buffer.write(child.toPlainText());
-    return true;
-  });
-  return buffer.toString();
-}
+/// A cell's text. The package keeps rich text as a span tree, and its own
+/// span prints the text of the whole tree, so one call covers both.
+String textValue(TextCellValue cell) => cell.value.toString();
 
 final _headerStyle = CellStyle(
   bold: true,
