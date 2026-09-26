@@ -55,7 +55,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
   late final TextEditingController _description;
   late final TextEditingController _amount;
   late final TextEditingController _taxRate;
-  late final TextEditingController _paid;
   late final TextEditingController _notes;
 
   SupplierInvoice? _existing;
@@ -63,7 +62,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
   DateTime _invoiceDate = dateOnly(DateTime.now());
   DateTime _receivedDate = dateOnly(DateTime.now());
   DateTime _dueDate = dateOnly(DateTime.now().add(const Duration(days: 30)));
-  DateTime _paidDate = dateOnly(DateTime.now());
   String _paymentMethod = 'Cash';
   final List<String> _receipts = [];
   final List<_LineDraft> _lineDrafts = [];
@@ -89,7 +87,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
     _description = TextEditingController();
     _amount = TextEditingController();
     _taxRate = TextEditingController();
-    _paid = TextEditingController();
     _notes = TextEditingController();
 
     if (_isEditing) {
@@ -107,7 +104,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
         _receivedDate = e.receivedDate;
         _dueDate = e.dueDate;
         _paymentMethod = e.paymentMethod;
-        if (e.paidDate != null) _paidDate = e.paidDate!;
         _receipts.addAll(e.receipts);
         _invoiceNo.text = e.invoiceNumber;
         _reference.text = e.reference;
@@ -117,7 +113,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
         _taxRate.text = e.taxRatePercent == e.taxRatePercent.roundToDouble()
             ? e.taxRatePercent.round().toString()
             : e.taxRatePercent.toString();
-        _paid.text = (e.amountPaidPesewas / 100).toStringAsFixed(2);
         if (e.lines.isNotEmpty) {
           _lineDrafts.addAll(e.lines.map((l) => _LineDraft(l)));
           _amount.text = (e.lineItemsTotalPesewas / 100).toStringAsFixed(2);
@@ -133,7 +128,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
     _description.dispose();
     _amount.dispose();
     _taxRate.dispose();
-    _paid.dispose();
     _notes.dispose();
     _searchController.dispose();
     for (final d in _lineDrafts) {
@@ -313,7 +307,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
         ..showSnackBar(const SnackBar(content: Text('Select a supplier first.')));
       return;
     }
-    final paidAmount = _parseMoney(_paid.text) ?? 0;
     final amount = _hasLines ? _computedSubtotal : (_parseMoney(_amount.text) ?? 0);
     final tax = _parsePercent(_taxRate.text);
 
@@ -354,6 +347,10 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
       invoiceLines = lines;
     }
 
+    // What has been paid is not decided here. A new invoice starts at nothing,
+    // and an edit leaves the figure the payments page has already recorded
+    // exactly as it found it, so saving invoice details can never quietly undo
+    // a payment.
     final invoice = _existing == null
         ? SupplierInvoice.create(
             supplierId: _supplierId!,
@@ -363,10 +360,8 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
             dueDate: _dueDate,
             amountPesewas: amount,
             taxRatePercent: tax ?? 0,
-            amountPaidPesewas: paidAmount,
             reference: _reference.text.trim(),
             description: _description.text.trim(),
-            paidDate: paidAmount > 0 ? _paidDate : null,
             paymentMethod: _paymentMethod,
             notes: _notes.text.trim(),
             receipts: List.of(_receipts),
@@ -380,9 +375,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
             dueDate: _dueDate,
             amountPesewas: amount,
             taxRatePercent: tax ?? 0,
-            amountPaidPesewas: paidAmount,
-            paidDate: paidAmount > 0 ? _paidDate : null,
-            clearPaidDate: paidAmount <= 0,
             reference: _reference.text.trim(),
             description: _description.text.trim(),
             paymentMethod: _paymentMethod,
@@ -448,7 +440,9 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
 
   int get _liveTotal => _liveSubtotal + _liveTax;
 
-  int get _livePaid => _parseMoney(_paid.text) ?? 0;
+  /// What the payments page has already settled against this invoice. Payments
+  /// are recorded there and nowhere else, so this only ever reads.
+  int get _recordedPaid => _existing?.amountPaidPesewas ?? 0;
 
   int _lineTotal(_LineDraft d) {
     final boxes = int.tryParse(d.boxes.text.trim()) ?? 0;
@@ -459,7 +453,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
   @override
   Widget build(BuildContext context) {
     final suppliers = ref.watch(suppliersProvider);
-    final hasPaid = _livePaid > 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -483,8 +476,8 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
                         _itemsSection(),
                       ];
                       final side = <Widget>[
-                        _datesSection(hasPaid),
-                        _amountsSection(hasPaid),
+                        _datesSection(),
+                        _amountsSection(),
                         _totalsPanel(),
                         _notesSection(),
                       ];
@@ -751,6 +744,10 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
   static const _piecesFlex = 2;
   static const _priceFlex = 3;
   static const _badgeWidth = 24.0;
+
+  /// Wider than the round number badge, because the word 'ITEM' has to sit on
+  /// one line above it.
+  static const _itemHeadingWidth = 44.0;
   static const _totalWidth = 110.0;
   static const _deleteWidth = 36.0;
   static const _gutter = 8.0;
@@ -767,12 +764,25 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
           fontWeight: FontWeight.w800,
           letterSpacing: 0.7,
         );
+    // A column heading must never break across two lines: a wrapped 'ITEM'
+    // reads as 'ITE' with an 'M' dropped underneath it. Headings stay on one
+    // line and shrink to fit their column instead.
     Widget heading(String label, {int flex = 0, double width = 0, Alignment align = Alignment.centerLeft}) {
-      final text = Text(label, style: style, textAlign: TextAlign.left);
+      final text = Text(
+        label,
+        style: style,
+        maxLines: 1,
+        softWrap: false,
+      );
+      final fitted = FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: align,
+        child: text,
+      );
       if (flex > 0) {
-        return Expanded(flex: flex, child: Align(alignment: align, child: text));
+        return Expanded(flex: flex, child: Align(alignment: align, child: fitted));
       }
-      return SizedBox(width: width, child: Align(alignment: align, child: text));
+      return SizedBox(width: width, child: Align(alignment: align, child: fitted));
     }
 
     return Container(
@@ -783,7 +793,7 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
       ),
       child: Row(
         children: [
-          heading('ITEM', width: _badgeWidth),
+          heading('ITEM', width: _itemHeadingWidth),
           const SizedBox(width: _gutter),
           heading('PRODUCT', flex: _nameFlex),
           const SizedBox(width: _gutter),
@@ -969,7 +979,7 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
     );
   }
 
-  Widget _datesSection(bool hasPaid) {
+  Widget _datesSection() {
     return FormSection(
       title: 'Dates',
       icon: Icons.event_outlined,
@@ -1004,22 +1014,13 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
                 onPicked: (d) => setState(() => _dueDate = d),
               ),
             ),
-            if (hasPaid)
-              (
-                flex: 1,
-                child: _dateField(
-                  label: 'Paid Date',
-                  value: _paidDate,
-                  onPicked: (d) => setState(() => _paidDate = d),
-                ),
-              ),
           ],
         ),
       ],
     );
   }
 
-  Widget _amountsSection(bool hasPaid) {
+  Widget _amountsSection() {
     return FormSection(
       title: 'Amounts',
       icon: Icons.payments_outlined,
@@ -1063,29 +1064,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
             ),
           ],
         ),
-        FieldRow(
-          fields: [
-            (
-              flex: 3,
-              child: TextFormField(
-                controller: _paid,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Paid (GH₵)',
-                  prefixText: '₵ ',
-                ),
-                validator: (v) {
-                  final p = _parseMoney(v ?? '');
-                  if (p == null) return 'Enter a valid amount';
-                  return null;
-                },
-                onChanged: (_) => setState(() {}),
-              ),
-            ),
-            (flex: 2, child: _paymentField(hasPaid)),
-          ],
-        ),
       ],
     );
   }
@@ -1095,7 +1073,7 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
     final texts = Theme.of(context).textTheme;
     final tax = _liveTax;
     final total = _liveTotal;
-    final paid = _livePaid;
+    final paid = _recordedPaid;
     final balance = total - paid;
     final rate = _parsePercent(_taxRate.text) ?? 0;
 
@@ -1165,6 +1143,28 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
             formatPesewas(balance),
             strong: true,
             color: balance <= 0 ? const Color(0xFF0F9D77) : scheme.error,
+          ),
+          const SizedBox(height: 8),
+          // The paid figure is the ledger's, not this form's, so say where it
+          // comes from rather than leaving it looking editable.
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline, size: 14, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  paid > 0
+                      ? 'Payments are recorded on the Payments page.'
+                      : 'Record a payment on the Payments page once this '
+                          'invoice is saved.',
+                  style: texts.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1240,22 +1240,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _paymentField(bool hasPaid) {
-    return DropdownButtonFormField<String>(
-      initialValue: _paymentMethod,
-      decoration: const InputDecoration(labelText: 'Payment method'),
-      items: [
-        for (final m in kPaymentMethods)
-          DropdownMenuItem(value: m, child: Text(m)),
-      ],
-      onChanged: hasPaid
-          ? (v) {
-              if (v != null) setState(() => _paymentMethod = v);
-            }
-          : null,
     );
   }
 
