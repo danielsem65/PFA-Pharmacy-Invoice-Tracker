@@ -505,8 +505,8 @@ pw.Widget _classicDetails(InvoicePrintSheet sheet, PrintFonts f) {
 /// The classic item table's columns. The table widths and both forms of the
 /// title row are derived from this list, so a title can never drift away from
 /// the column it belongs to.
-const List<({String label, int flex, bool right})> _itemColumns =
-    <({String label, int flex, bool right})>[
+const List<({String label, double flex, bool right})> _itemColumns =
+    <({String label, double flex, bool right})>[
       (label: 'Item', flex: 5, right: false),
       (label: 'Boxes', flex: 2, right: true),
       (label: 'Pcs/box', flex: 2, right: true),
@@ -567,7 +567,7 @@ pw.Widget _itemsHeaderRow(PrintFonts f) {
         pw.SizedBox(width: _itemIndexWidth),
         for (final column in _itemColumns)
           pw.Expanded(
-            flex: column.flex,
+            flex: column.flex.toInt(),
             child: pw.Padding(
               padding: const pw.EdgeInsets.symmetric(horizontal: 2),
               child: _itemTitle(column.label, f, right: column.right),
