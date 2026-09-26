@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/design.dart';
 import '../core/theme.dart';
 import 'aurora_background.dart';
+import 'glass.dart';
 
 /// A number worth noticing: a coloured icon, a quiet label, the figure itself,
 /// and optionally the line of context that makes the figure mean something.
@@ -52,23 +53,24 @@ class StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final texts = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final tokens = AppTokens.of(context);
     final lead = accent ?? (gradient.isEmpty ? scheme.primary : gradient.first);
 
-    final tile = Container(
-      width: width,
+    // A figure is the one thing on a page that deserves to be looked at, and it
+    // sits directly on the aurora, so this is a real pane rather than a wash of
+    // white over it. The card's colour goes on the rim, which lights that edge
+    // without tinting the numbers sitting on it.
+    final tile = ConstrainedBox(
       constraints: BoxConstraints(minWidth: 96, minHeight: compact ? 82 : 92),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      decoration: Frost.panel(
-        context,
-        radius: tokens.radius,
-        tint: lead,
-        fill: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.white.withValues(alpha: 0.72),
-      ),
-      child: Column(
+      child: SizedBox(
+        width: width,
+        child: GlassSurface(
+          level: GlassLevel.regular,
+          radius: tokens.radius,
+          accent: lead,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -137,7 +139,10 @@ class StatCard extends StatelessWidget {
               ),
             ),
           ],
-        ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
 

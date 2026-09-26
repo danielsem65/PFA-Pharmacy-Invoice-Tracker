@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/app_preferences.dart';
 import '../models/business_profile.dart';
 import '../models/payment.dart';
 import '../models/print_settings.dart';
@@ -54,6 +55,8 @@ abstract class LocalStore {
   Future<void> saveProfile(BusinessProfile profile);
   Future<PrintSettings> loadPrintSettings();
   Future<void> savePrintSettings(PrintSettings settings);
+  Future<AppPreferences> loadPreferences();
+  Future<void> savePreferences(AppPreferences preferences);
 
   /// Non-null when the last load hit damaged data. The list is only
   /// non-empty once per app run, so the UI can warn exactly once.
@@ -69,6 +72,7 @@ class SharedPrefsLocalStore implements LocalStore {
   static const _paymentsKey = 'pfa.payments.v1';
   static const _profileKey = 'pfa.profile.v1';
   static const _printSettingsKey = 'pfa.print.v1';
+  static const _preferencesKey = 'pfa.prefs.v1';
   static const _backupSuffix = '.bak';
 
   final KeyValueStore _prefs;
@@ -146,6 +150,21 @@ class SharedPrefsLocalStore implements LocalStore {
   @override
   Future<void> savePrintSettings(PrintSettings settings) =>
       _writeRecord(_printSettingsKey, settings.toJson());
+
+  @override
+  Future<AppPreferences> loadPreferences() async {
+    final record = await _readRecord(_preferencesKey);
+    if (record == null) return AppPreferences();
+    try {
+      return AppPreferences.fromJson(record);
+    } catch (_) {
+      return AppPreferences();
+    }
+  }
+
+  @override
+  Future<void> savePreferences(AppPreferences preferences) =>
+      _writeRecord(_preferencesKey, preferences.toJson());
 
   Future<Map<String, dynamic>?> _readRecord(String key) async {
     final raw = await _prefs.read(key);

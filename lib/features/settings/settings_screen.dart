@@ -3,18 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/design.dart';
+import '../../models/app_preferences.dart';
 import '../../models/business_profile.dart';
 import '../../models/print_settings.dart';
 import '../../widgets/aurora_background.dart';
 import '../../widgets/page_header.dart';
 import '../../widgets/toast.dart';
 import '../../widgets/ui_kit.dart';
+import 'app_preferences_controller.dart';
 import 'business_profile_controller.dart';
 import 'print_settings_controller.dart';
 
-/// Business details and how printing behaves. The business profile is the only
-/// place the pharmacy's own name is typed, because it is what every printed
-/// invoice carries in the header.
+/// Business details, how the app is lit, and how printing behaves. The business
+/// profile is the only place the pharmacy's own name is typed, because it is
+/// what every printed invoice carries in the header.
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -163,6 +165,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final profile = ref.watch(businessProfileProvider);
     final printSettings = ref.watch(printSettingsProvider);
+    final preferences = ref.watch(appPreferencesProvider);
     _seed(profile);
 
     final saveButton = FilledButton.icon(
@@ -221,11 +224,41 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: FadeSlideIn(
               delay: const Duration(milliseconds: 130),
               child: SectionCard(
+                title: 'Appearance',
+                subtitle: 'How lit the glass is. The panes are frosted either '
+                    'way, so both themes keep the same depth.',
+                icon: Icons.contrast_outlined,
+                accentIndex: 1,
+                children: <Widget>[
+                  for (final theme in AppTheme.values)
+                    ChoiceRow<AppTheme>(
+                      value: theme,
+                      label: theme.label,
+                      blurb: theme.blurb,
+                      icon: switch (theme) {
+                        AppTheme.dark => Icons.dark_mode_outlined,
+                        AppTheme.light => Icons.light_mode_outlined,
+                        AppTheme.system => Icons.brightness_auto_outlined,
+                      },
+                      selected: preferences.theme == theme,
+                      onTap: () => ref
+                          .read(appPreferencesProvider.notifier)
+                          .setTheme(theme),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Insets.xxl, Insets.lg, Insets.xxl, 0),
+            child: FadeSlideIn(
+              delay: const Duration(milliseconds: 190),
+              child: SectionCard(
                 title: 'Printing',
                 subtitle: 'Which layout the Print button uses. "Ask each time" '
                     'opens the picker every time you print.',
                 icon: Icons.print_outlined,
-                accentIndex: 1,
+                accentIndex: 2,
                 children: <Widget>[
                   _LayoutChoice(
                     settings: printSettings,
@@ -240,12 +273,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(Insets.xxl, Insets.lg, Insets.xxl, 0),
             child: FadeSlideIn(
-              delay: const Duration(milliseconds: 190),
+              delay: const Duration(milliseconds: 250),
               child: SectionCard(
                 title: 'Data',
                 subtitle: 'Everything is stored on this PC only.',
                 icon: Icons.lock_outline,
-                accentIndex: 2,
+                accentIndex: 3,
                 children: <Widget>[
                   Align(
                     alignment: Alignment.centerLeft,
@@ -284,82 +317,24 @@ class _LayoutChoice extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: <Widget>[
-        _option(
-          context,
-          'Ask each time',
-          'Open the layout picker when you print. Nothing is remembered.',
-          null,
+        ChoiceRow<InvoicePrintLayout?>(
+          value: null,
+          label: 'Ask each time',
+          blurb: 'Open the layout picker when you print. Nothing is remembered.',
+          icon: _icons[null],
+          selected: settings.defaultLayout == null,
+          onTap: () => onChanged(null),
         ),
         for (final layout in InvoicePrintLayout.values)
-          _option(context, layout.label, layout.blurb, layout),
-      ],
-    );
-  }
-
-  Widget _option(
-    BuildContext context,
-    String label,
-    String blurb,
-    InvoicePrintLayout? value,
-  ) {
-    final scheme = Theme.of(context).colorScheme;
-    final texts = Theme.of(context).textTheme;
-    final selected = settings.defaultLayout == value;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: Insets.sm),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          onTap: () => onChanged(value),
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            padding: const EdgeInsets.all(Insets.md),
-            decoration: BoxDecoration(
-              color: selected
-                  ? scheme.primary.withValues(alpha: 0.10)
-                  : scheme.surfaceContainerHighest.withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: selected ? scheme.primary : scheme.outlineVariant,
-                width: selected ? 1.6 : 1,
-              ),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Icon(
-                  _icons[value],
-                  size: 20,
-                  color: selected ? scheme.primary : null,
-                ),
-                const SizedBox(width: Insets.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        label,
-                        style: texts.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        blurb,
-                        style: texts.bodySmall?.copyWith(height: 1.35),
-                      ),
-                    ],
-                  ),
-                ),
-                if (selected)
-                  Icon(Icons.check_circle, size: 20, color: scheme.primary),
-              ],
-            ),
+          ChoiceRow<InvoicePrintLayout?>(
+            value: layout,
+            label: layout.label,
+            blurb: layout.blurb,
+            icon: _icons[layout],
+            selected: settings.defaultLayout == layout,
+            onTap: () => onChanged(layout),
           ),
-        ),
-      ),
+      ],
     );
   }
 }

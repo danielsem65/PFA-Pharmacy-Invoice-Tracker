@@ -1092,6 +1092,93 @@ class SectionCard extends StatelessWidget {
   }
 }
 
+/// One choice in a list of choices: an icon, a name, a line explaining what it
+/// means, and a tick on the one that is currently in effect.
+///
+/// Shared so that picking a print layout and picking a theme are the same
+/// gesture with the same answer to "which one am I on".
+class ChoiceRow<T> extends StatelessWidget {
+  const ChoiceRow({
+    super.key,
+    required this.value,
+    required this.label,
+    required this.blurb,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final T value;
+  final String label;
+  final String blurb;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final texts = Theme.of(context).textTheme;
+    final radius = BorderRadius.circular(AppTokens.of(context).radiusSm);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Insets.sm),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: radius,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: radius,
+          child: Container(
+            padding: const EdgeInsets.all(Insets.md),
+            decoration: BoxDecoration(
+              // The chosen one is lit from within rather than filled, so a row
+              // of these reads as one object with a position, not a set of
+              // buttons.
+              color: selected
+                  ? scheme.primary.withValues(alpha: 0.10)
+                  : scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+              borderRadius: radius,
+              border: Border.all(
+                color: selected ? scheme.primary : scheme.outlineVariant,
+                width: selected ? 1.6 : 1,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Icon(
+                  icon,
+                  size: 20,
+                  color: selected ? scheme.primary : null,
+                ),
+                const SizedBox(width: Insets.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        label,
+                        style: texts.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(blurb, style: texts.bodySmall?.copyWith(height: 1.35)),
+                    ],
+                  ),
+                ),
+                if (selected)
+                  Icon(Icons.check_circle, size: 20, color: scheme.primary),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Gaps between the children of a card, without a Column per row.
 List<Widget> _gaps(List<Widget> items, double gap) => <Widget>[
       for (var i = 0; i < items.length; i++) ...<Widget>[

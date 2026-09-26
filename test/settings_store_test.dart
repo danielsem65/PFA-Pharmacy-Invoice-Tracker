@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pfa_pharmacy_invoice_tracker/data/app_database.dart';
+import 'package:pfa_pharmacy_invoice_tracker/models/app_preferences.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/business_profile.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/print_settings.dart';
 
@@ -118,6 +119,60 @@ void main() {
 
       final settings = await store.loadPrintSettings();
       expect(settings.defaultLayout, isNull);
+    });
+  });
+
+  group('app preferences', () {
+    test('start on the night sky, which is the intended look', () async {
+      final preferences = await store.loadPreferences();
+
+      expect(preferences.theme, AppTheme.dark);
+    });
+
+    test('saves and reads back the chosen theme', () async {
+      await store.savePreferences(AppPreferences(theme: AppTheme.light));
+
+      final loaded = await store.loadPreferences();
+      expect(loaded.theme, AppTheme.light);
+    });
+
+    test('every theme survives the round trip by name', () async {
+      for (final theme in AppTheme.values) {
+        await store.savePreferences(AppPreferences(theme: theme));
+        expect(
+          (await store.loadPreferences()).theme,
+          theme,
+          reason: theme.name,
+        );
+      }
+    });
+
+    test('a damaged record falls back to the default', () async {
+      prefs.values['pfa.prefs.v1'] = '{oops';
+
+      final preferences = await store.loadPreferences();
+      expect(preferences.theme, AppTheme.dark);
+    });
+
+    test('a theme written by a future version does not lock anyone out', () async {
+      prefs.values['pfa.prefs.v1'] = '{"theme":"fromTheFuture"}';
+
+      final preferences = await store.loadPreferences();
+      expect(preferences.theme, AppTheme.dark);
+    });
+
+    test('copyWith keeps the theme unless it is replaced', () {
+      final light = AppPreferences(theme: AppTheme.light);
+
+      expect(light.copyWith().theme, AppTheme.light);
+      expect(light.copyWith(theme: AppTheme.system).theme, AppTheme.system);
+    });
+
+    test('every theme has a label and a blurb to explain it', () {
+      for (final theme in AppTheme.values) {
+        expect(theme.label, isNotEmpty, reason: theme.name);
+        expect(theme.blurb, isNotEmpty, reason: theme.name);
+      }
     });
   });
 
