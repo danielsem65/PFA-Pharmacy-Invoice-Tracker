@@ -15,6 +15,7 @@ import '../../widgets/page_header.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/toast.dart';
+import '../../widgets/glass_dialog.dart';
 import '../../widgets/ui_kit.dart';
 import '../suppliers/suppliers_controller.dart';
 import 'invoices_controller.dart';
@@ -306,7 +307,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
   ) async {
     final selectedIds = Set.of(_selected);
     final count = selectedIds.length;
-    final ok = await showDialog<bool>(
+    final ok = await showGlassDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(count == 1 ? 'Delete invoice?' : 'Delete $count invoices?'),

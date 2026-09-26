@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../widgets/glass_dialog.dart';
 import 'updater_controller.dart';
 
 Future<void> runUpdateFlow(BuildContext context, WidgetRef ref) async {
   final updater = ref.read(updaterProvider.notifier);
   await updater.check();
   if (!context.mounted) return;
-  await showDialog<void>(
+  await showGlassDialog<void>(
     context: context,
     barrierDismissible: false,
     builder: (_) => const _UpdateDialog(),

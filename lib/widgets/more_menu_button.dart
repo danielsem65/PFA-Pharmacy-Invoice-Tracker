@@ -7,6 +7,7 @@ import '../features/updates/update_dialog.dart';
 import '../models/product.dart';
 import '../models/supplier_invoice.dart';
 import 'export_actions.dart';
+import 'glass_dialog.dart';
 
 /// The ⋮ menu. Screens pass the rows they are currently showing so that
 /// "Export CSV" matches the visible search and filters instead of silently
@@ -152,7 +153,7 @@ class MoreMenuButton extends ConsumerWidget {
 
   void _showAbout(BuildContext context, WidgetRef ref) {
     final version = ref.watch(appVersionProvider).valueOrNull;
-    showDialog<void>(
+    showGlassDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('PFA Pharmacy Invoice Tracker'),

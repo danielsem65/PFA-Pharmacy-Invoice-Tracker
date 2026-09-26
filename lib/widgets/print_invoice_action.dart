@@ -10,6 +10,7 @@ import '../models/business_profile.dart';
 import '../models/print_settings.dart';
 import '../models/supplier.dart';
 import '../models/supplier_invoice.dart';
+import 'glass_dialog.dart';
 import 'toast.dart';
 
 /// What the picker dialog came back with.
@@ -31,7 +32,7 @@ Future<InvoicePrintChoice?> showInvoiceLayoutPicker(
   var selected = initial ?? InvoicePrintLayout.classicForm;
   var remember = initial != null;
 
-  return showDialog<InvoicePrintChoice>(
+  return showGlassDialog<InvoicePrintChoice>(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) {

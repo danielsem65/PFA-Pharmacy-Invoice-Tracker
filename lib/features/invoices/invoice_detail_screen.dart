@@ -13,6 +13,7 @@ import '../../widgets/more_menu_button.dart';
 import '../../widgets/page_header.dart';
 import '../../widgets/print_invoice_action.dart';
 import '../../widgets/stat_card.dart';
+import '../../widgets/glass_dialog.dart';
 import '../../widgets/status_badge.dart';
 import 'invoices_controller.dart';
 import '../suppliers/suppliers_controller.dart';
@@ -185,7 +186,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     String id,
   ) async {
-    final ok = await showDialog<bool>(
+    final ok = await showGlassDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete invoice?'),
@@ -209,7 +210,7 @@ class InvoiceDetailScreen extends ConsumerWidget {
   }
 
   void _openReceipt(BuildContext context, WidgetRef ref, String name) {
-    showDialog<void>(
+    showGlassDialog<void>(
       context: context,
       builder: (context) => FutureBuilder<File>(
         future: ref

@@ -9,6 +9,7 @@ import '../../models/product.dart';
 import '../../models/supplier.dart';
 import '../../models/supplier_invoice.dart';
 import '../../widgets/desktop_form.dart';
+import '../../widgets/glass_dialog.dart';
 import '../invoices/invoices_controller.dart';
 import '../products/products_controller.dart';
 import '../suppliers/suppliers_controller.dart';
@@ -164,7 +165,7 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
     // Left null when the dialog is cancelled, which is not an error: nothing
     // was created, so there is nothing to select.
     String? createdId;
-    await showDialog<void>(
+    await showGlassDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('New supplier'),
@@ -268,7 +269,7 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
   }
 
   Future<void> _lookUpProduct() async {
-    final chosen = await showDialog<Product>(
+    final chosen = await showGlassDialog<Product>(
       context: context,
       builder: (context) => const _ProductLookupDialog(),
     );

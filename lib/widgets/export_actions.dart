@@ -16,6 +16,7 @@ import '../models/payment.dart';
 import '../models/product.dart';
 import '../models/supplier.dart';
 import '../models/supplier_invoice.dart';
+import 'glass_dialog.dart';
 import 'toast.dart';
 
 const kInvoicesCsvType = XTypeGroup(
@@ -239,7 +240,7 @@ Future<void> restoreBackup(BuildContext context, WidgetRef ref) async {
   final safety = p.join(backupDir, 'auto_${_stamp()}.zip');
 
   if (!context.mounted) return;
-  final ok = await showDialog<bool>(
+  final ok = await showGlassDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
       title: const Text('Restore backup?'),

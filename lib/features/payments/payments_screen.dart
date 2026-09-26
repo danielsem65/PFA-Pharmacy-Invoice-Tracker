@@ -7,6 +7,7 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../models/payment.dart';
 import '../../widgets/export_actions.dart';
+import '../../widgets/glass_dialog.dart';
 import '../../widgets/page_header.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/ui_kit.dart';
@@ -270,7 +271,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   Future<void> _confirmRemove(BuildContext context, Payment payment) async {
     final notifier = ref.read(paymentsProvider.notifier);
     final count = payment.allocations.length;
-    final ok = await showDialog<bool>(
+    final ok = await showGlassDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete this payment?'),
