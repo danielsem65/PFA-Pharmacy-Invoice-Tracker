@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pfa_pharmacy_invoice_tracker/app.dart';
+import 'package:pfa_pharmacy_invoice_tracker/core/router.dart';
 import 'package:pfa_pharmacy_invoice_tracker/data/app_database.dart';
 import 'package:pfa_pharmacy_invoice_tracker/features/invoices/invoice_form_screen.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/supplier_invoice.dart';
@@ -277,20 +278,19 @@ void main() {
       );
     }
 
-    String _diag() {
-      final buf = StringBuffer();
-      for (final line in debugDumpApp().split('\n')) {
-        if (line.contains('InvoiceFormScreen') ||
-            line.contains('InvoicesScreen') ||
-            line.contains('Offstage') ||
-            line.contains('ModalScope') ||
-            line.contains('_RouteMatchList') ||
-            line.contains('implies')) {
-          buf.writeln(line.trim());
-        }
-      }
-      return buf.toString();
+    String diag(WidgetTester tester) {
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(App).first),
+      );
+      final uri =
+          container.read(routerProvider).routerDelegate.currentConfiguration.uri;
+      return 'DIAG location=$uri '
+          'onstage=${form.evaluate().length} '
+          'anywhere=${find.byType(InvoiceFormScreen, skipOffstage: false).evaluate().length} '
+          'invoices=${find.byType(InvoicesScreen, skipOffstage: false).evaluate().length} '
+          'newInvoiceText=${find.text('New Invoice', skipOffstage: false).evaluate().length}';
     }
+
 
     testWidgets('keeps the half-finished invoice on screen', (tester) async {
       final store = InMemoryLocalStore(suppliers: [supplier('s1', 'Pharma Co')]);
@@ -352,11 +352,7 @@ void main() {
       expect(find.text('New supplier'), findsNothing);
       expect(store.suppliers.map((s) => s.name), isNot(contains('Emerald')));
       // ignore: avoid_print
-      print('DIAG onstage=${form.evaluate().length} '
-          'anywhere=${find.byType(InvoiceFormScreen, skipOffstage: false).evaluate().length} '
-          'invoices=${find.byType(InvoicesScreen, skipOffstage: false).evaluate().length}');
-      // ignore: avoid_print
-      print('DIAGTREE\n${_diag()}');
+      print(diag(tester));
       // The form is still the one that was there before, holding what was typed.
       expect(form, findsOneWidget);
       expect(tester.state(form), same(before.state));
