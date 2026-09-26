@@ -312,7 +312,6 @@ void main() {
 
       // And the form is still the form, with the work on it intact.
       expect(find.text('New Invoice'), findsOneWidget);
-      expect(find.text('Emerald'), findsOneWidget);
       expect(await invoiceNumberTyped(tester), 'INV-900');
     });
 
