@@ -3,22 +3,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/design.dart';
 import '../../core/format.dart';
 import '../../data/receipt_storage.dart';
 import '../../models/supplier.dart';
 import '../../models/supplier_invoice.dart';
-import '../../widgets/export_actions.dart';
 import '../../widgets/aurora_background.dart';
-import '../../widgets/glass_panel.dart';
+import '../../widgets/export_actions.dart';
 import '../../widgets/more_menu_button.dart';
 import '../../widgets/page_header.dart';
 import '../../widgets/stat_card.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/toast.dart';
+import '../../widgets/ui_kit.dart';
 import '../suppliers/suppliers_controller.dart';
 import 'invoices_controller.dart';
 
 enum _FilterStatus { all, outstanding, overdue, paid }
+
+/// How wide the checkbox column is when the list is in selection mode, so the
+/// headings and the rows line up.
+const double _selectionGutter = 46;
 
 class InvoicesScreen extends ConsumerStatefulWidget {
   const InvoicesScreen({super.key});
@@ -38,6 +43,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
   Widget build(BuildContext context) {
     final invoices = ref.watch(invoicesProvider);
     final suppliers = ref.watch(suppliersProvider);
+    final tokens = AppTokens.of(context);
 
     String nameOf(String supplierId) {
       for (final s in suppliers) {
@@ -76,7 +82,9 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
     var totalOwing = 0;
     var overdue = 0;
     var openCount = 0;
+    var overdueCount = 0;
     for (final inv in allVisible) {
+      if (inv.statusAt(now) == InvoiceStatus.overdue) overdueCount++;
       if (inv.balancePesewas <= 0) continue;
       openCount++;
       totalOwing += inv.balancePesewas;
@@ -94,19 +102,35 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
 
     final allSelected =
         sorted.isNotEmpty && sorted.every((s) => _selected.contains(s.id));
+    final filtering =
+        _filterSupplierId != null || _filterStatus != _FilterStatus.all || q.isNotEmpty;
 
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        children: <Widget>[
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+            padding: Insets.page,
             child: PageHeader(
               title: 'Invoices',
               subtitle:
                   '${invoices.length} ${invoices.length == 1 ? 'invoice' : 'invoices'} · ${DateFormat('EEEE, d MMMM yyyy').format(now)}',
               icon: Icons.receipt_long,
-              accentIndex: 0,
+              accentIndex: 1,
+              meta: <Widget>[
+                MiniPill(
+                  '$openCount still owing',
+                  icon: Icons.account_balance_wallet_outlined,
+                  dense: true,
+                ),
+                if (overdueCount > 0)
+                  MiniPill(
+                    '$overdueCount past due',
+                    icon: Icons.warning_amber_rounded,
+                    color: tokens.danger,
+                    dense: true,
+                  ),
+              ],
               actions: <Widget>[
                 MoreMenuButton(),
                 FilledButton.icon(
@@ -118,140 +142,79 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
-            child: FadeSlideIn(
+            padding: const EdgeInsets.fromLTRB(Insets.xxl, Insets.lg, Insets.xxl, 0),
+            child: FilterBar(
               delay: const Duration(milliseconds: 70),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  color: Theme.of(context)
-                      .colorScheme
-                      .surface
-                      .withValues(alpha: 0.55),
-                  border: Border.all(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .outlineVariant
-                        .withValues(alpha: 0.5),
-                  ),
+              children: <Widget>[
+                SearchField(
+                  hint: 'Search invoices…',
+                  onChanged: (v) => setState(() => _query = v),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 4,
-                      child: TextField(
-                        decoration: const InputDecoration(
-                          hintText: 'Search invoices…',
-                          prefixIcon: Icon(Icons.search),
-                          isDense: true,
-                        ),
-                        onChanged: (v) => setState(() => _query = v),
-                      ),
+                FilterSelect<String?>(
+                  value: _filterSupplierId,
+                  hint: 'All suppliers',
+                  items: <DropdownMenuItem<String?>>[
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('All suppliers'),
                     ),
-                    const SizedBox(width: 12),
-                    Flexible(
-                      flex: 1,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .outlineVariant
-                                  .withValues(alpha: 0.7),
-                            ),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 12),
-                          child: DropdownButton<String?>(
-                            value: _filterSupplierId,
-                            hint: const Text('All suppliers'),
-                            underline: const SizedBox.shrink(),
-                            borderRadius: BorderRadius.circular(14),
-                            items: [
-                              const DropdownMenuItem<String?>(
-                                value: null,
-                                child: Text('All suppliers'),
-                              ),
-                              for (final Supplier s in suppliers)
-                                DropdownMenuItem<String?>(
-                                  value: s.id,
-                                  child: Text(s.name),
-                                ),
-                            ],
-                            onChanged: (v) =>
-                                setState(() => _filterSupplierId = v),
-                          ),
-                        ),
+                    for (final Supplier s in suppliers)
+                      DropdownMenuItem<String?>(
+                        value: s.id,
+                        child: Text(s.name),
                       ),
+                  ],
+                  onChanged: (v) => setState(() => _filterSupplierId = v),
+                ),
+                FilterSelect<_FilterStatus>(
+                  wrapperKey: const Key('status-filter'),
+                  value: _filterStatus,
+                  hint: 'All statuses',
+                  items: const <DropdownMenuItem<_FilterStatus>>[
+                    DropdownMenuItem<_FilterStatus>(
+                      value: _FilterStatus.all,
+                      child: Text('All statuses'),
                     ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      flex: 1,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          key: const Key('status-filter'),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .outlineVariant
-                                  .withValues(alpha: 0.7),
-                            ),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 12),
-                          child: DropdownButton<_FilterStatus>(
-                            value: _filterStatus,
-                            underline: const SizedBox.shrink(),
-                            borderRadius: BorderRadius.circular(14),
-                            items: const [
-                              DropdownMenuItem<_FilterStatus>(
-                                value: _FilterStatus.all,
-                                child: Text('All statuses'),
-                              ),
-                              DropdownMenuItem<_FilterStatus>(
-                                value: _FilterStatus.outstanding,
-                                child: Text('Outstanding'),
-                              ),
-                              DropdownMenuItem<_FilterStatus>(
-                                value: _FilterStatus.overdue,
-                                child: Text('Overdue'),
-                              ),
-                              DropdownMenuItem<_FilterStatus>(
-                                value: _FilterStatus.paid,
-                                child: Text('Paid'),
-                              ),
-                            ],
-                            onChanged: (v) => setState(
-                                () => _filterStatus = v ?? _FilterStatus.all),
-                          ),
-                        ),
-                      ),
+                    DropdownMenuItem<_FilterStatus>(
+                      value: _FilterStatus.outstanding,
+                      child: Text('Outstanding'),
                     ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      tooltip: 'Select invoices',
-                      onPressed: sorted.isEmpty
-                          ? null
-                          : () => setState(() {
-                                _selectionMode = true;
-                                if (_selected.isEmpty) {
-                                  _selected.add(sorted.first.id);
-                                }
-                              }),
-                      icon: const Icon(Icons.checklist_rounded),
+                    DropdownMenuItem<_FilterStatus>(
+                      value: _FilterStatus.overdue,
+                      child: Text('Overdue'),
+                    ),
+                    DropdownMenuItem<_FilterStatus>(
+                      value: _FilterStatus.paid,
+                      child: Text('Paid'),
                     ),
                   ],
+                  onChanged: (v) => setState(
+                    () => _filterStatus = v ?? _FilterStatus.all,
+                  ),
                 ),
-              ),
+                _BarIconButton(
+                  tooltip: 'Select invoices',
+                  icon: Icons.checklist_rounded,
+                  onPressed: sorted.isEmpty
+                      ? null
+                      : () => setState(() {
+                            _selectionMode = true;
+                            if (_selected.isEmpty) {
+                              _selected.add(sorted.first.id);
+                            }
+                          }),
+                ),
+                if (filtering)
+                  _BarIconButton(
+                    tooltip: 'Clear filters',
+                    icon: Icons.filter_alt_off_outlined,
+                    onPressed: () => setState(() {
+                      _query = '';
+                      _filterSupplierId = null;
+                      _filterStatus = _FilterStatus.all;
+                    }),
+                  ),
+              ],
             ),
           ),
           if (_selectionMode)
@@ -281,79 +244,55 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
                   : () => _confirmBulkDelete(context, sorted),
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: StatCard(
-                    label: 'Total outstanding',
-                    value: formatPesewas(totalOwing),
-                    icon: Icons.account_balance_wallet_outlined,
-                    gradient: StatCard.primary,
-                    delay: const Duration(milliseconds: 120),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: StatCard(
-                    label: 'Overdue',
-                    value: formatPesewas(overdue),
-                    icon: Icons.warning_amber_rounded,
-                    gradient: StatCard.danger,
-                    delay: const Duration(milliseconds: 190),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: StatCard(
-                    label: 'Unpaid',
-                    value: '$openCount',
-                    icon: Icons.pending_actions_outlined,
-                    gradient: StatCard.neutral,
-                    delay: const Duration(milliseconds: 260),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: StatCard(
-                    label: 'Invoices',
-                    value: '${allVisible.length}',
-                    icon: Icons.receipt_long_outlined,
-                    gradient: StatCard.primary,
-                    delay: const Duration(milliseconds: 330),
-                  ),
-                ),
-              ],
+            padding: const EdgeInsets.fromLTRB(Insets.xxl, Insets.md, Insets.xxl, 0),
+            child: _SummaryRow(
+              totalOwing: totalOwing,
+              overdue: overdue,
+              openCount: openCount,
+              visible: allVisible.length,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: Insets.md),
           Expanded(
             child: sorted.isEmpty
                 ? _EmptyInvoices(onAdd: () => context.go('/new'))
-                : _InvoiceTable(
-                    invoices: sorted,
-                    supplierNames: {
-                      for (final s in suppliers) s.id: s.name,
-                    },
-                    now: now,
-                    selectionMode: _selectionMode,
-                    selected: _selected,
-                    onToggle: (id) => setState(() {
-                      if (!_selected.add(id)) _selected.remove(id);
-                    }),
-                    onOpen: (id) {
-                      if (_selectionMode) {
-                        setState(() {
-                          if (!_selected.add(id)) _selected.remove(id);
-                        });
-                      } else {
-                        context.go('/invoices/$id');
-                      }
-                    },
-                    onEnterSelection: (id) => setState(() {
-                      _selectionMode = true;
-                      _selected.add(id);
-                    }),
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      Insets.xxl,
+                      0,
+                      Insets.xxl,
+                      Insets.xxl,
+                    ),
+                    child: _InvoiceTable(
+                      invoices: sorted,
+                      supplierNames: {
+                        for (final s in suppliers) s.id: s.name,
+                      },
+                      now: now,
+                      selectionMode: _selectionMode,
+                      selected: _selected,
+                      onToggle: (id) => setState(() {
+                        if (!_selected.add(id)) _selected.remove(id);
+                      }),
+                      onOpen: (id) {
+                        if (_selectionMode) {
+                          setState(() {
+                            if (!_selected.add(id)) _selected.remove(id);
+                          });
+                        } else {
+                          context.go('/invoices/$id');
+                        }
+                      },
+                      onEnterSelection: (id) => setState(() {
+                        _selectionMode = true;
+                        _selected.add(id);
+                      }),
+                      footer: _TableFooter(
+                        shown: sorted.length,
+                        total: invoices.length,
+                        overdueCount: overdueCount,
+                      ),
+                    ),
                   ),
           ),
         ],
@@ -378,7 +317,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
               : 'These invoices and their attachments will be removed. '
                   'This cannot be undone.',
         ),
-        actions: [
+        actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
@@ -422,6 +361,69 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen> {
   }
 }
 
+/// The four figures that sit above the table. Each one is a way into the same
+/// list, so they are buttons rather than pictures of numbers.
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({
+    required this.totalOwing,
+    required this.overdue,
+    required this.openCount,
+    required this.visible,
+  });
+
+  final int totalOwing;
+  final int overdue;
+  final int openCount;
+  final int visible;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: StatCard(
+            label: 'Total outstanding',
+            value: formatPesewas(totalOwing),
+            icon: Icons.account_balance_wallet_outlined,
+            gradient: StatCard.primary,
+            delay: const Duration(milliseconds: 120),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: StatCard(
+            label: 'Overdue',
+            value: formatPesewas(overdue),
+            icon: Icons.warning_amber_rounded,
+            gradient: StatCard.danger,
+            delay: const Duration(milliseconds: 190),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: StatCard(
+            label: 'Unpaid',
+            value: '$openCount',
+            icon: Icons.pending_actions_outlined,
+            gradient: StatCard.neutral,
+            delay: const Duration(milliseconds: 260),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: StatCard(
+            label: 'Invoices',
+            value: '$visible',
+            icon: Icons.receipt_long_outlined,
+            gradient: StatCard.primary,
+            delay: const Duration(milliseconds: 330),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _InvoiceTable extends StatelessWidget {
   const _InvoiceTable({
     required this.invoices,
@@ -432,6 +434,7 @@ class _InvoiceTable extends StatelessWidget {
     required this.onToggle,
     required this.onOpen,
     required this.onEnterSelection,
+    required this.footer,
   });
 
   final List<SupplierInvoice> invoices;
@@ -442,39 +445,83 @@ class _InvoiceTable extends StatelessWidget {
   final ValueChanged<String> onToggle;
   final ValueChanged<String> onOpen;
   final ValueChanged<String> onEnterSelection;
+  final Widget footer;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-      child: GlassPanel(
-        child: Column(
-          children: [
-            _HeaderRow(selectionMode: selectionMode),
-            Expanded(
-              child: ListView.builder(
-                itemCount: invoices.length,
-                itemBuilder: (context, index) {
-                  final inv = invoices[index];
-                  return _InvoiceRow(
-                    invoice: inv,
-                    supplierName:
-                        supplierNames[inv.supplierId] ?? 'Unknown',
-                    now: now,
-                    selectionMode: selectionMode,
-                    selected: selected.contains(inv.id),
-                    onTap: () => onOpen(inv.id),
-                    onToggle: () => onToggle(inv.id),
-                    onSecondaryTap: () {
-                      if (!selectionMode) onEnterSelection(inv.id);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+    return TableScaffold(
+      header: _HeaderRow(selectionMode: selectionMode),
+      footer: footer,
+      body: ListView.builder(
+        padding: EdgeInsets.zero,
+        itemCount: invoices.length,
+        itemBuilder: (context, index) {
+          final inv = invoices[index];
+          return _InvoiceRow(
+            invoice: inv,
+            supplierName: supplierNames[inv.supplierId] ?? 'Unknown',
+            now: now,
+            selectionMode: selectionMode,
+            selected: selected.contains(inv.id),
+            onTap: () => onOpen(inv.id),
+            onToggle: () => onToggle(inv.id),
+            onSecondaryTap: () {
+              if (!selectionMode) onEnterSelection(inv.id);
+            },
+          );
+        },
       ),
+    );
+  }
+}
+
+/// The count of what is on screen and what is late, along the bottom of the
+/// table. No figures here: the columns above already carry the money.
+class _TableFooter extends StatelessWidget {
+  const _TableFooter({
+    required this.shown,
+    required this.total,
+    required this.overdueCount,
+  });
+
+  final int shown;
+  final int total;
+  final int overdueCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final texts = Theme.of(context).textTheme;
+    return Row(
+      children: <Widget>[
+        Icon(
+          Icons.filter_alt_outlined,
+          size: 14,
+          color: scheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Text(
+            shown == total
+                ? '$shown of $total shown'
+                : '$shown of $total shown, filtered',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: texts.labelSmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        if (overdueCount > 0)
+          Text(
+            '$overdueCount past due',
+            style: texts.labelSmall?.copyWith(
+              color: AppTokens.of(context).danger,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+      ],
     );
   }
 }
@@ -486,37 +533,17 @@ class _HeaderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = panelHeadingStyle(context);
-    Widget cell(String label, {double flex = 1, TextAlign align = TextAlign.left}) {
-      return Expanded(
-        flex: flex ~/ 1,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
-          child: Text(
-            label,
-            textAlign: align,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: style,
-          ),
-        ),
-      );
-    }
-
-    return PanelHeader(
-      padding: EdgeInsets.zero,
-      child: Row(
-        children: [
-          if (selectionMode) const SizedBox(width: 18),
-          cell('Supplier', flex: 22),
-          cell('Invoice No', flex: 13),
-          cell('Due', flex: 10),
-          cell('Total (GH₵)', flex: 10, align: TextAlign.right),
-          cell('Paid (GH₵)', flex: 10, align: TextAlign.right),
-          cell('Balance (GH₵)', flex: 10, align: TextAlign.right),
-          cell('Status', flex: 12),
-        ],
-      ),
+    return Row(
+      children: <Widget>[
+        if (selectionMode) const SizedBox(width: _selectionGutter),
+        const ColumnHeading('Supplier', flex: 22),
+        const ColumnHeading('Invoice No', flex: 13),
+        const ColumnHeading('Due', flex: 10),
+        const ColumnHeading('Total (GH₵)', flex: 10, trailing: true),
+        const ColumnHeading('Paid (GH₵)', flex: 10, trailing: true),
+        const ColumnHeading('Balance (GH₵)', flex: 10, trailing: true),
+        const ColumnHeading('Status', flex: 12),
+      ],
     );
   }
 }
@@ -545,89 +572,119 @@ class _InvoiceRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final status = invoice.statusAt(now);
     final texts = Theme.of(context).textTheme;
+    final status = invoice.statusAt(now);
 
-    Widget cell(String text, {double flex = 1, TextAlign align = TextAlign.left, TextStyle? style}) {
-      return Expanded(
-        flex: flex ~/ 1,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-          child: Text(
-            text,
-            textAlign: align,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: style,
-          ),
-        ),
-      );
-    }
-
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      // A colour stripe down the leading edge, so the state of an invoice can
-      // be read without reading the pill.
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            left: BorderSide(
-              color: StatusBadge.colorOf(status).withValues(alpha: 0.9),
-              width: 3,
+    return HoverRow(
+      onTap: onTap,
+      onSecondaryTap: onSecondaryTap,
+      selected: selected,
+      stripe: StatusBadge.colorOf(status),
+      child: Row(
+        children: <Widget>[
+          if (selectionMode)
+            SizedBox(
+              width: _selectionGutter,
+              child: Checkbox(
+                value: selected,
+                onChanged: (_) => onToggle(),
+              ),
+            ),
+          TableCellBox(
+            flex: 22,
+            child: Text(
+              supplierName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
-        ),
-        child: Material(
-          color: selected
-              ? scheme.primaryContainer.withValues(alpha: 0.45)
-              : Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            onSecondaryTap: onSecondaryTap,
-            hoverColor: scheme.primary.withValues(alpha: 0.05),
-            child: Row(
-              children: [
-                if (selectionMode)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 10, right: 2),
-                    child: Checkbox(
-                      value: selected,
-                      onChanged: (_) => onToggle(),
-                    ),
-                  ),
-                cell(supplierName, flex: 22,
-                    style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                cell(invoice.invoiceNumber, flex: 13,
-                    style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                cell(formatDate(invoice.dueDate), flex: 10),
-                cell(
-                  formatPesewas(invoice.totalPesewas),
-                  flex: 10,
-                  align: TextAlign.right,
-                  style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                cell(formatPesewas(invoice.amountPaidPesewas), flex: 10,
-                    align: TextAlign.right),
-                cell(
-                  formatPesewas(invoice.balancePesewas),
-                  flex: 10,
-                  align: TextAlign.right,
-                  style: texts.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: invoice.owesMoney ? scheme.error : scheme.onSurface,
-                  ),
-                ),
-                Expanded(
-                  flex: 12,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: StatusBadge(status: status),
-                    ),
-                  ),
-                ),
-              ],
+          TableCellBox(
+            flex: 13,
+            child: Text(
+              invoice.invoiceNumber,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+          TableCellBox(
+            flex: 10,
+            child: Text(
+              formatDate(invoice.dueDate),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          TableCellBox(
+            flex: 10,
+            align: CrossAxisAlignment.end,
+            child: Money(invoice.totalPesewas, tone: MoneyTone.normal),
+          ),
+          TableCellBox(
+            flex: 10,
+            align: CrossAxisAlignment.end,
+            child: Money(invoice.amountPaidPesewas, tone: MoneyTone.quiet),
+          ),
+          TableCellBox(
+            flex: 10,
+            align: CrossAxisAlignment.end,
+            child: Money(
+              invoice.balancePesewas,
+              tone: MoneyTone.strong,
+              color: invoice.owesMoney ? scheme.error : null,
+              emphasiseWhenZero: true,
+            ),
+          ),
+          TableCellBox(
+            flex: 12,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: StatusBadge(status: status),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The square action at the end of the filter bar, sized to sit level with the
+/// fields beside it.
+class _BarIconButton extends StatelessWidget {
+  const _BarIconButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onPressed,
+          child: Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: scheme.onSurface.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: onPressed == null
+                  ? scheme.onSurfaceVariant.withValues(alpha: 0.4)
+                  : scheme.onSurfaceVariant,
             ),
           ),
         ),
@@ -659,7 +716,7 @@ class _SelectionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+      padding: const EdgeInsets.fromLTRB(Insets.xxl, Insets.md, Insets.xxl, 0),
       child: FadeSlideIn(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -674,7 +731,7 @@ class _SelectionBar extends StatelessWidget {
             border: Border.all(color: scheme.primary.withValues(alpha: 0.28)),
           ),
           child: Row(
-            children: [
+            children: <Widget>[
               IconButton(
                 tooltip: 'Exit selection',
                 onPressed: onClose,

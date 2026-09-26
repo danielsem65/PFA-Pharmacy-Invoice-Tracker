@@ -182,7 +182,6 @@ List<SupplierShare> supplierShares({
   DateTime? now,
   int limit = 6,
 }) {
-  final today = now ?? DateTime.now();
   final owed = <String, int>{};
   final counts = <String, int>{};
   for (final inv in invoices) {

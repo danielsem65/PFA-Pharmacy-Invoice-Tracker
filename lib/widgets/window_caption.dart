@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -26,16 +27,9 @@ class AppWindowCaption extends StatefulWidget {
   /// behind it.
   static bool get isSupported {
     if (kIsWeb) return false;
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.windows:
-      case TargetPlatform.macOS:
-      case TargetPlatform.linux:
-        return true;
-      case TargetPlatform.android:
-      case TargetPlatform.iOS:
-      case TargetPlatform.fuchsia:
-        return false;
-    }
+    return defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.linux;
   }
 
   /// Matches the sidebar so the two line up down the left edge.

@@ -37,7 +37,6 @@ class Money extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final texts = Theme.of(context).textTheme;
-    final tokens = AppTokens.of(context);
 
     final TextStyle? style = switch (tone) {
       MoneyTone.quiet => texts.bodyMedium?.copyWith(
@@ -695,13 +694,22 @@ class MeterBar extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final width = constraints.maxWidth * clamped;
-              if (!animate) return Container(width: width, height: height);
+              if (!animate) {
+                return SizedBox(
+                  width: width,
+                  height: height,
+                  child: ColoredBox(color: lead),
+                );
+              }
               return TweenAnimationBuilder<double>(
                 tween: Tween<double>(begin: 0, end: width),
                 duration: const Duration(milliseconds: 700),
                 curve: Curves.easeOutCubic,
-                builder: (context, w, _) =>
-                    Container(width: w, height: height),
+                builder: (context, w, _) => SizedBox(
+                  width: w,
+                  height: height,
+                  child: ColoredBox(color: lead),
+                ),
               );
             },
           ),
