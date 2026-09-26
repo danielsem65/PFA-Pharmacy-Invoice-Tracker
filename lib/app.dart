@@ -18,6 +18,10 @@ class App extends ConsumerWidget {
       title: 'PFA Pharmacy Invoice Tracker',
       theme: buildTheme(),
       darkTheme: buildDarkTheme(),
+      // The panes are glass over a night sky, so the sky is the default. The
+      // light theme is still a first-class citizen and the settings page
+      // switches between them.
+      themeMode: ThemeMode.dark,
       debugShowCheckedModeBanner: false,
       routerConfig: router,
     );

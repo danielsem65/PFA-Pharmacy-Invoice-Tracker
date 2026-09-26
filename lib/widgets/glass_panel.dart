@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../core/design.dart';
+import 'glass.dart';
 
-/// The frosted card every list and detail page sits in: a translucent panel
-/// with a soft primary glow, so the aurora behind it shows through faintly.
-/// Shared rather than copied, so a page and the list it belongs to cannot drift
-/// apart.
+/// The frosted card every list and detail page sits in: a real blurred pane
+/// with a rim that catches the light, so the aurora behind it shows through
+/// softened rather than merely tinted. Shared rather than copied, so a page and
+/// the list it belongs to cannot drift apart.
 class GlassPanel extends StatelessWidget {
   const GlassPanel({
     super.key,
@@ -13,6 +14,7 @@ class GlassPanel extends StatelessWidget {
     this.radius = 22,
     this.clip = true,
     this.tint,
+    this.level = GlassLevel.regular,
   });
 
   final Widget child;
@@ -21,20 +23,20 @@ class GlassPanel extends StatelessWidget {
   /// Set false when the content draws its own corners and must not be clipped.
   final bool clip;
 
-  /// Colours the border and the glow when a panel belongs to one page rather
-  /// than to the app in general.
+  /// Replaces the fill of the pane, keeping the blur and the rim.
   final Color? tint;
+
+  /// How hard the pane frosts what is behind it.
+  final GlassLevel level;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: Frost.panel(context, radius: radius, tint: tint),
-      child: clip
-          ? ClipRRect(
-              borderRadius: BorderRadius.circular(radius),
-              child: child,
-            )
-          : child,
+    return GlassSurface(
+      level: level,
+      radius: radius,
+      tint: tint,
+      clip: clip,
+      child: child,
     );
   }
 }
