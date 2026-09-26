@@ -19,7 +19,10 @@ Future<void> main() async {
     minimumSize: _smallestSize,
     center: true,
     title: 'PFA Pharmacy Invoice Tracker',
-    windowButtonVisibility: true,
+    // The app draws its own title bar and its own window buttons, so Windows
+    // is asked to keep out of the way.
+    titleBarStyle: TitleBarStyle.hidden,
+    windowButtonVisibility: false,
   );
   windowManager.waitUntilReadyToShow(options, () async {
     await windowManager.show();

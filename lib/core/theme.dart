@@ -157,9 +157,9 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
     focusColor: scheme.primary.withValues(alpha: 0.12),
     highlightColor: scheme.primary.withValues(alpha: 0.06),
     splashColor: scheme.primary.withValues(alpha: 0.10),
-    cursorColor: scheme.primary,
+
     textSelectionTheme: TextSelectionThemeData(
-      cursorColor: scheme.primary,
+  
       selectionColor: scheme.primary.withValues(alpha: 0.28),
       selectionHandleColor: scheme.primary,
     ),
@@ -227,14 +227,9 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
         textStyle: baseTextTheme.labelLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),
-        // A primary action darkens and deepens under the pointer rather than
-        // fading out, so it still reads as a button.
-        overlayColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.pressed)) {
-            return scheme.onPrimary.withValues(alpha: 0.18);
-          }
-          return scheme.onPrimary.withValues(alpha: 0.10);
-        }),
+        // A primary action deepens under the pointer rather than fading out, so
+        // it still reads as a button.
+        overlayColor: scheme.onPrimary.withValues(alpha: 0.12),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -247,9 +242,7 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
         textStyle: baseTextTheme.labelLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),
-        overlayColor: WidgetStatePropertyAll(
-          scheme.primary.withValues(alpha: 0.08),
-        ),
+        overlayColor: scheme.primary.withValues(alpha: 0.08),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -258,9 +251,7 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
         textStyle: baseTextTheme.labelLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),
-        overlayColor: WidgetStatePropertyAll(
-          scheme.primary.withValues(alpha: 0.08),
-        ),
+        overlayColor: scheme.primary.withValues(alpha: 0.08),
       ),
     ),
     iconButtonTheme: IconButtonThemeData(
