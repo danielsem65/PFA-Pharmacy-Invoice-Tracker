@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -103,22 +104,47 @@ class _GrainPainter extends CustomPainter {
 
   static const int _dots = 2600;
 
+  /// Half the specks catch the light and half sit in the shadow, so the film
+  /// has both directions in it rather than reading as a grey haze.
+  static const List<_GrainPass> _grainPasses = <_GrainPass>[
+    _GrainPass(0, Color(0x06FFFFFF)),
+    _GrainPass(1, Color(0x06000000)),
+  ];
+
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
-    final light = Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.022);
-    final dark = Paint()..color = const Color(0xFF000000).withValues(alpha: 0.020);
-    for (var i = 0; i < _dots; i++) {
-      // Fixed seeds, so the grain is in the same place every repaint and does
-      // not crawl when something above it changes.
-      final x = _hash(41, i) * size.width;
-      final y = _hash(42, i) * size.height;
-      canvas.drawPoint(Offset(x, y), _hash(43, i) > 0.5 ? light : dark);
+    // Two passes, so the light and the dark specks are batched into two draw
+    // calls rather than one per speck.
+    for (final pass in _grainPasses) {
+      final dots = <Offset>[];
+      for (var i = pass.seed; i < _dots; i += 2) {
+        // Fixed seeds, so the grain is in the same place every repaint and does
+        // not crawl when something above it changes.
+        dots.add(
+          Offset(_hash(41, i) * size.width, _hash(42, i) * size.height),
+        );
+      }
+      canvas.drawPoints(
+        ui.PointMode.points,
+        dots,
+        Paint()
+          ..strokeWidth = 1
+          ..strokeCap = ui.StrokeCap.square
+          ..color = pass.color,
+      );
     }
   }
 
   @override
   bool shouldRepaint(covariant _GrainPainter old) => false;
+}
+
+class _GrainPass {
+  const _GrainPass(this.seed, this.color);
+
+  final int seed;
+  final Color color;
 }
 
 /// A stable pseudo-random number in 0..1, so the same grain is in the same
