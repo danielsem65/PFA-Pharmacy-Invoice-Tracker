@@ -179,7 +179,10 @@ void main() {
       final store = InMemoryLocalStore(
         suppliers: [supplier('s1', 'Pharma Co')],
       );
-      await pumpApp(tester, store, size: const Size(800, 1400));
+      // The item lines are laid out as a table — headings and all — only inside
+      // this width band: wide enough for the columns, narrow enough that the
+      // form has not yet split into a main column and a side column.
+      await pumpApp(tester, store, size: const Size(1000, 1400));
       await openForm(tester);
 
       final add = find.text('Add item');
@@ -222,15 +225,21 @@ void main() {
       expect(find.byKey(const Key('payment-back')), findsOneWidget);
 
       // Held to a reading width rather than stretched across the window, and
-      // centred in whatever space it is given.
-      final amount = tester.getRect(find.byKey(const Key('payment-amount')));
-      expect(amount.width, lessThanOrEqualTo(720));
-      final viewport = find
-          .ancestor(of: find.byType(ReadingWidth), matching: find.byType(Scrollable))
-          .first;
+      // centred in whatever space it is given. The wrapper fills the window; the
+      // block inside it is the 720 the form is measured by.
+      final wrapper = find.byType(ReadingWidth);
+      final block = find.descendant(
+        of: wrapper,
+        matching: find.byType(ConstrainedBox),
+      );
+      expect(tester.getSize(block).width, 720);
       expect(
-        amount.center.dx,
-        closeTo(tester.getRect(viewport).center.dx, 1),
+        tester.getRect(block).center.dx,
+        closeTo(tester.getRect(wrapper).center.dx, 1),
+      );
+      expect(
+        tester.getRect(find.byKey(const Key('payment-amount'))).width,
+        lessThanOrEqualTo(720),
       );
 
       // Still a working form.
