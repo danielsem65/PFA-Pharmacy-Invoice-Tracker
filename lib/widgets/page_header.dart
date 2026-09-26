@@ -110,10 +110,15 @@ class PageHeader extends StatelessWidget {
             ),
             if (actions.isNotEmpty) ...<Widget>[
               const SizedBox(width: 12),
-              Wrap(
-                spacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: actions,
+              // Flexible, so a window too narrow for both buttons wraps them
+              // onto a second line instead of running off the edge.
+              Flexible(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: actions,
+                ),
               ),
             ],
           ],

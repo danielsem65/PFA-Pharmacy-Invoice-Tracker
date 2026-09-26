@@ -136,14 +136,14 @@ void main() {
       // Paid 100.00. Owed 200.00 + 50.00 + 50.00 + 50.00 = 350.00. Of that,
       // INV-005 is past its due date, so 50.00 is overdue. Nothing was paid
       // this month. The 100.00 shows twice: the record, and the paid total.
-      expect(find.text('Total paid'), findsOneWidget);
-      expect(find.text('GH₵ 100.00'), findsNWidgets(2));
-      expect(find.text('Still owed'), findsOneWidget);
-      expect(find.text('GH₵ 350.00'), findsOneWidget);
-      expect(find.text('Overdue'), findsOneWidget);
-      expect(find.text('GH₵ 50.00'), findsOneWidget);
-      expect(find.text('Paid this month'), findsOneWidget);
-      expect(find.text('GH₵ 0.00'), findsOneWidget);
+      expect(find.text('TOTAL PAID'), findsOneWidget);
+      expect(find.text('₵100.00'), findsNWidgets(2));
+      expect(find.text('STILL OWED'), findsOneWidget);
+      expect(find.text('₵350.00'), findsOneWidget);
+      expect(find.text('OVERDUE'), findsOneWidget);
+      expect(find.text('₵50.00'), findsOneWidget);
+      expect(find.text('PAID THIS MONTH'), findsOneWidget);
+      expect(find.text('₵0.00'), findsOneWidget);
     });
 
     testWidgets('searching for an unpaid invoice finds no payment',
@@ -221,7 +221,7 @@ void main() {
       // the new record, and the paid-this-month figure it lands in.
       expect(find.text('2 payments recorded'), findsOneWidget);
       expect(find.text('INV-002, INV-003'), findsOneWidget);
-      expect(find.text('GH₵ 150.00'), findsNWidgets(2));
+      expect(find.text('₵150.00'), findsNWidgets(2));
     });
 
     testWidgets('a payment with nothing ticked is refused', (tester) async {
