@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/theme.dart';
+import 'glass.dart';
 
 /// The left rail: where you are, and the two or three things you do most.
 ///
@@ -74,39 +75,19 @@ class AppSidebar extends StatelessWidget {
       _items.length == itemCount,
       'The sidebar and the shell must list the same destinations, in order.',
     );
-    return Container(
+    return SizedBox(
       width: width,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[Aurora.nightC, Aurora.nightA, Aurora.nightB],
-        ),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 26,
-            offset: Offset(8, 0),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: <Widget>[
-          // Two soft blooms so the panel is not a flat block of navy.
-          Positioned(
-            top: -90,
-            right: -70,
-            child: const _SidebarBloom(color: Aurora.indigo, size: 260),
-          ),
-          Positioned(
-            bottom: 60,
-            left: -80,
-            child: const _SidebarBloom(color: Aurora.teal, size: 240),
-          ),
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
+      child: GlassBar(
+        // Ultra, not thick: the navigation labels sit on this and have to stay
+        // readable whatever the sky is doing behind them.
+        level: GlassLevel.ultra,
+        // The bar is flush with the left, top and bottom of the window, so the
+        // only edge that needs a rim is the one facing the page.
+        sides: GlassSides.right,
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
                 const SizedBox(height: 14),
                 Padding(
                   padding: EdgeInsets.symmetric(
@@ -172,7 +153,7 @@ class AppSidebar extends StatelessWidget {
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -190,32 +171,6 @@ class _NavItemData {
   final IconData selectedIcon;
   final String label;
   final Color accent;
-}
-
-class _SidebarBloom extends StatelessWidget {
-  const _SidebarBloom({required this.color, required this.size});
-
-  final Color color;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: <Color>[
-              color.withValues(alpha: 0.32),
-              color.withValues(alpha: 0),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _BrandMark extends StatelessWidget {

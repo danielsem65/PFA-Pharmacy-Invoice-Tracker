@@ -92,17 +92,19 @@ ThemeData buildDarkTheme() {
 
 ThemeData _compose(ColorScheme scheme, Brightness brightness) {
   final isDark = brightness == Brightness.dark;
+  final tokens = AppTokens.forBrightness(brightness);
+  final glass = tokens.glass;
   // The page itself is see-through so the drifting backdrop can show through
   // the gaps between cards, like frosted glass over the sky.
   final pageColor = isDark
-      ? scheme.surface.withValues(alpha: 0.55)
-      : scheme.surface.withValues(alpha: 0.72);
-  final cardColor = isDark
-      ? scheme.surfaceContainerLow.withValues(alpha: 0.86)
-      : Colors.white.withValues(alpha: 0.82);
+      ? scheme.surface.withValues(alpha: 0.30)
+      : scheme.surface.withValues(alpha: 0.62);
+  final cardColor = glass.tintRegular;
+  // Fields sit on top of a pane that is already blurred, so they stay flat and
+  // only need to read as a recess rather than as another sheet of glass.
   final fieldColor = isDark
-      ? Colors.white.withValues(alpha: 0.06)
-      : scheme.primary.withValues(alpha: 0.05);
+      ? Colors.black.withValues(alpha: 0.18)
+      : Colors.white.withValues(alpha: 0.55);
 
   final baseTextTheme = ThemeData(
     colorScheme: scheme,
@@ -127,7 +129,7 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
     colorScheme: scheme,
     // The measurements and semantic colours every widget reads instead of
     // inventing its own.
-    extensions: <ThemeExtension<dynamic>>[AppTokens.forBrightness(brightness)],
+    extensions: <ThemeExtension<dynamic>>[tokens],
     scaffoldBackgroundColor: pageColor,
     fontFamily: 'Segoe UI',
     textTheme: baseTextTheme.copyWith(
@@ -205,11 +207,7 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
       shape: SoftCardBorder(
         radius: 20,
         fill: cardColor,
-        side: BorderSide(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.08)
-              : scheme.primary.withValues(alpha: 0.10),
-        ),
+        side: BorderSide(color: glass.rim),
         shadowColor: isDark
             ? Colors.black.withValues(alpha: 0.5)
             : _ink.withValues(alpha: 0.30),
@@ -219,11 +217,19 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
+        // The one solid thing in a glass interface. Everything else can be
+        // see-through; the primary action cannot, or it stops being primary.
         backgroundColor: scheme.primary,
         foregroundColor: scheme.onPrimary,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: Color.lerp(scheme.primary, Colors.white, 0.35)!,
+            width: 1,
+          ),
+        ),
         textStyle: baseTextTheme.labelLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),
@@ -235,14 +241,16 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: scheme.primary,
-        backgroundColor: scheme.primary.withValues(alpha: 0.04),
+        // A secondary action is a thin pane of glass over the page, not an
+        // outline drawn on top of one.
+        backgroundColor: glass.tintThin,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        side: BorderSide(color: scheme.primary.withValues(alpha: 0.28), width: 1.4),
+        side: BorderSide(color: glass.rim, width: 1.2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: baseTextTheme.labelLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),
-        overlayColor: scheme.primary.withValues(alpha: 0.08),
+        overlayColor: scheme.primary.withValues(alpha: 0.10),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -311,23 +319,20 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.10)
-              : scheme.primary.withValues(alpha: 0.12),
-        ),
+        borderSide: BorderSide(color: glass.rim),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.10)
-              : scheme.primary.withValues(alpha: 0.12),
-        ),
+        borderSide: BorderSide(color: glass.rim),
       ),
+      // Focus is a rim that lights up rather than a colour swap, so the field
+      // keeps its material while saying clearly that it has the keyboard.
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: scheme.primary, width: 1.8),
+        borderSide: BorderSide(
+          color: Color.lerp(scheme.primary, glass.edgeLight, 0.35)!,
+          width: 1.6,
+        ),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
@@ -350,18 +355,25 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
       ),
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
-      side: BorderSide.none,
+      backgroundColor: glass.tintThin,
+      side: BorderSide(color: glass.rim),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       labelStyle: baseTextTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
     ),
     dialogTheme: DialogThemeData(
-      backgroundColor: isDark ? scheme.surfaceContainerHigh : Colors.white,
+      // Nearly opaque on purpose. A dialog is a pane of glass held right up
+      // against the reader's face; the more of the page shows through it, the
+      // harder it is to read a number off it. The rim and the shadow are what
+      // tell you it is floating.
+      backgroundColor: glass.tintUltra,
       surfaceTintColor: Colors.transparent,
       elevation: 12,
-      barrierColor: _ink.withValues(alpha: isDark ? 0.6 : 0.32),
+      barrierColor: _ink.withValues(alpha: isDark ? 0.55 : 0.30),
       insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(color: glass.rim, width: 1.2),
+      ),
       titleTextStyle: baseTextTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
       contentTextStyle: baseTextTheme.bodyMedium?.copyWith(
         color: scheme.onSurfaceVariant,
@@ -376,7 +388,7 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     ),
     dividerTheme: DividerThemeData(
-      color: scheme.outlineVariant.withValues(alpha: 0.5),
+      color: glass.rim,
       space: 1,
       thickness: 1,
     ),
@@ -387,11 +399,7 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
         fillColor: fieldColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: isDark
-                ? Colors.white.withValues(alpha: 0.10)
-                : scheme.primary.withValues(alpha: 0.12),
-          ),
+          borderSide: BorderSide(color: glass.rim),
         ),
       ),
     ),
@@ -414,20 +422,38 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
     ),
     popupMenuTheme: PopupMenuThemeData(
       surfaceTintColor: Colors.transparent,
-      color: isDark ? scheme.surfaceContainerHigh : Colors.white,
+      color: glass.tintUltra,
       elevation: 10,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: glass.rim, width: 1.1),
+      ),
+    ),
+    menuTheme: MenuThemeData(
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(glass.tintUltra),
+        elevation: const WidgetStatePropertyAll(10),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: glass.rim, width: 1.1),
+          ),
+        ),
+      ),
     ),
     scrollbarTheme: ScrollbarThemeData(
       thumbVisibility: const WidgetStatePropertyAll(true),
-      thickness: WidgetStatePropertyAll(8),
-      radius: const Radius.circular(8),
+      thickness: const WidgetStatePropertyAll(6),
+      radius: const Radius.circular(6),
       thumbColor: WidgetStatePropertyAll(
-        scheme.primary.withValues(alpha: isDark ? 0.35 : 0.28),
+        isDark
+            ? Colors.white.withValues(alpha: 0.22)
+            : scheme.primary.withValues(alpha: 0.24),
       ),
       trackColor: WidgetStatePropertyAll(
-        scheme.primary.withValues(alpha: isDark ? 0.08 : 0.05),
+        isDark ? Colors.black.withValues(alpha: 0.14) : scheme.primary.withValues(alpha: 0.05),
       ),
+      trackBorderColor: const WidgetStatePropertyAll(Colors.transparent),
     ),
     tooltipTheme: TooltipThemeData(
       waitDuration: const Duration(milliseconds: 500),

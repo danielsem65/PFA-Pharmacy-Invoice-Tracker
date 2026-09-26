@@ -13,7 +13,7 @@ import '../core/theme.dart';
 /// frame that never comes. This settles after a couple of seconds and then
 /// simply sits there.
 class AuroraBackground extends StatefulWidget {
-  const AuroraBackground({super.key, this.seed = 0, this.density = 1});
+  const AuroraBackground({super.key, this.seed = 0, this.density = 1, this.grain = true});
 
   /// Varies the layout a little between screens, so two pages never show the
   /// exact same sky.
@@ -21,6 +21,10 @@ class AuroraBackground extends StatefulWidget {
 
   /// Scales the particle count, for places that want a quieter backdrop.
   final double density;
+
+  /// The anti-banding film. Off for places where the sky is already being
+  /// covered by something busy.
+  final bool grain;
 
   @override
   State<AuroraBackground> createState() => _AuroraBackgroundState();
@@ -59,22 +63,69 @@ class _AuroraBackgroundState extends State<AuroraBackground>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return RepaintBoundary(
-      child: AnimatedBuilder(
-        animation: _drift,
-        builder: (context, _) {
-          return CustomPaint(
-            painter: _AuroraPainter(
-              t: Curves.easeOutCubic.transform(_drift.value),
-              seed: widget.seed,
-              density: widget.density,
-              strength: isDark ? 0.5 : 0.62,
-            ),
-            size: Size.infinite,
-          );
-        },
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          AnimatedBuilder(
+            animation: _drift,
+            builder: (context, _) {
+              return CustomPaint(
+                painter: _AuroraPainter(
+                  t: Curves.easeOutCubic.transform(_drift.value),
+                  seed: widget.seed,
+                  density: widget.density,
+                  strength: isDark ? 0.5 : 0.62,
+                ),
+                size: Size.infinite,
+              );
+            },
+          ),
+          // Grain sits on its own layer so it is painted once rather than on
+          // every frame of the intro, and so the blur never has to work around
+          // it.
+          if (widget.grain)
+            const CustomPaint(painter: _GrainPainter(), size: Size.infinite),
+        ],
       ),
     );
   }
+}
+
+/// A very fine film of noise over the whole sky.
+///
+/// Blurring a large, smooth gradient is exactly how an 8-bit display shows its
+/// stripes: the banding appears in the flat areas, and a blur widens those
+/// areas. A scatter of single-pixel dots at a couple of percent opacity is
+/// invisible as texture and completely removes the stripes. It is deliberately
+/// a separate painter that never repaints.
+class _GrainPainter extends CustomPainter {
+  const _GrainPainter();
+
+  static const int _dots = 2600;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    final light = Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: 0.022);
+    final dark = Paint()..color = const Color(0xFF000000).withValues(alpha: 0.020);
+    for (var i = 0; i < _dots; i++) {
+      // Fixed seeds, so the grain is in the same place every repaint and does
+      // not crawl when something above it changes.
+      final x = _hash(41, i) * size.width;
+      final y = _hash(42, i) * size.height;
+      canvas.drawPoint(Offset(x, y), _hash(43, i) > 0.5 ? light : dark);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GrainPainter old) => false;
+}
+
+/// A stable pseudo-random number in 0..1, so the same grain is in the same
+/// place every time the window is painted.
+double _hash(int salt, int i) {
+  final x = math.sin(salt * 12.9898 + i * 78.233) * 43758.5453;
+  return x - x.floorToDouble();
 }
 
 class _AuroraPainter extends CustomPainter {
@@ -121,9 +172,54 @@ class _AuroraPainter extends CustomPainter {
     canvas.drawCircle(Offset(x, y), radius, paint);
   }
 
+  /// A long, thin, tilted band of colour.
+  ///
+  /// Round blooms alone give a sky that is all soft circles, which blurs into
+  /// an even wash with no sense of direction. Real aurora is made of ribbons
+  /// hanging across the sky, and a blur follows those ribbons instead of
+  /// averaging everything into one colour.
+  void _curtain(Canvas canvas, Size size, int i, Color color, double alpha) {
+    final x = size.width * (0.05 + 0.9 * _noise(21, i));
+    final y = size.height * (0.02 + 0.6 * _noise(22, i));
+    final w = size.width * (0.45 + 0.5 * _noise(23, i));
+    final h = size.height * (0.10 + 0.14 * _noise(24, i));
+    final angle = -0.95 + 1.9 * _noise(25, i) + (1 - t) * 0.3;
+    final drift = t * (0.05 + 0.06 * _noise(26, i));
+
+    final rect = Rect.fromCenter(
+      center: Offset(x + size.width * drift, y),
+      width: w,
+      height: h,
+    );
+    canvas.save();
+    canvas.translate(rect.center.dx, rect.center.dy);
+    canvas.rotate(angle);
+    // RadialGradient stretched across a wide, short rect draws an ellipse,
+    // which is the shape of a ribbon of light.
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset.zero, width: w, height: h),
+      Paint()
+        ..shader = RadialGradient(
+          colors: <Color>[
+            color.withValues(alpha: alpha * strength),
+            color.withValues(alpha: 0),
+          ],
+          stops: const <double>[0, 1],
+        ).createShader(Rect.fromCenter(center: Offset.zero, width: w, height: h)),
+    );
+    canvas.restore();
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
+
+    // The ribbons go down first, so the round blooms read as light gathering
+    // on top of them rather than competing with them.
+    _curtain(canvas, size, 0, Aurora.teal, 0.17);
+    _curtain(canvas, size, 1, Aurora.indigo, 0.20);
+    _curtain(canvas, size, 2, Aurora.violet, 0.15);
+    _curtain(canvas, size, 3, Aurora.sky, 0.13);
 
     _bloom(canvas, size, 0, Aurora.indigo, 0.30);
     _bloom(canvas, size, 1, Aurora.teal, 0.26);

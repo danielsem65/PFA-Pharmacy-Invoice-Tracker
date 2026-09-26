@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../core/theme.dart';
+import 'glass.dart';
 
 /// The window's own title bar, drawn by the app instead of Windows.
 ///
 /// It sits above the sidebar and the page, is safe to drag by, and carries the
-/// three window buttons. The dark block on the left is painted the same night
-/// gradient as the sidebar so the two read as one piece of chrome.
+/// three window buttons. It is one pane of the same glass as the sidebar below
+/// it, so the two read as a single piece of chrome rather than two blocks
+/// painted to match.
 ///
 /// Named for the app rather than for the package: window_manager ships a
 /// caption of its own, and this one is built to match the sidebar.
@@ -86,100 +88,100 @@ class _AppWindowCaptionState extends State<AppWindowCaption>
   Widget build(BuildContext context) {
     return SizedBox(
       height: 38,
-      child: Row(
-        children: <Widget>[
-          Container(
-            width: widget.sidebarWidth,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: <Color>[Aurora.nightC, Aurora.nightA],
+      // One pane of glass across the whole caption, rather than two blocks
+      // painted to look similar. The caption and the sidebar below it are
+      // genuinely the same material now, and the drag area is the part that
+      // crosses from one to the other.
+      child: GlassBar(
+        level: GlassLevel.ultra,
+        sides: GlassSides.bottom,
+        child: Row(
+          children: <Widget>[
+            SizedBox(
+              width: widget.sidebarWidth,
+              child: Row(
+                children: <Widget>[
+                  const SizedBox(width: 18),
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: <Color>[Aurora.teal, Aurora.sky],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      'PFA Pharmacy',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              children: <Widget>[
-                const SizedBox(width: 18),
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: <Color>[Aurora.teal, Aurora.sky],
+            Expanded(
+              child: GestureDetector(
+                onDoubleTap: () => _guard(() async {
+                  if (_maximized) {
+                    await windowManager.unmaximize();
+                  } else {
+                    await windowManager.maximize();
+                  }
+                }),
+                child: DragToMoveArea(
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      widget.caption,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.45),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.4,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 9),
-                Expanded(
-                  child: Text(
-                    'PFA Pharmacy',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onDoubleTap: () => _guard(() async {
+            _CaptionButton(
+              icon: Icons.remove_rounded,
+              tooltip: 'Minimise',
+              onPressed: () => _guard(windowManager.minimize),
+            ),
+            _CaptionButton(
+              icon: _maximized
+                  ? Icons.close_fullscreen_rounded
+                  : Icons.open_in_full_rounded,
+              tooltip: _maximized ? 'Restore' : 'Maximise',
+              onPressed: () => _guard(() async {
                 if (_maximized) {
                   await windowManager.unmaximize();
                 } else {
                   await windowManager.maximize();
                 }
               }),
-              child: DragToMoveArea(
-                child: Container(
-                  color: Colors.white.withValues(alpha: 0.03),
-                  alignment: Alignment.center,
-                  child: Text(
-                    widget.caption,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.45),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                ),
-              ),
             ),
-          ),
-          _CaptionButton(
-            icon: Icons.remove_rounded,
-            tooltip: 'Minimise',
-            onPressed: () => _guard(windowManager.minimize),
-          ),
-          _CaptionButton(
-            icon: _maximized
-                ? Icons.close_fullscreen_rounded
-                : Icons.open_in_full_rounded,
-            tooltip: _maximized ? 'Restore' : 'Maximise',
-            onPressed: () => _guard(() async {
-              if (_maximized) {
-                await windowManager.unmaximize();
-              } else {
-                await windowManager.maximize();
-              }
-            }),
-          ),
-          _CaptionButton(
-            icon: Icons.close_rounded,
-            tooltip: 'Close',
-            danger: true,
-            onPressed: () => _guard(windowManager.close),
-          ),
-        ],
+            _CaptionButton(
+              icon: Icons.close_rounded,
+              tooltip: 'Close',
+              danger: true,
+              onPressed: () => _guard(windowManager.close),
+            ),
+          ],
+        ),
       ),
     );
   }
