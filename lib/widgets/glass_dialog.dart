@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/design.dart';
 import 'glass.dart';
 
 /// A dialog that is actually a pane of glass.
