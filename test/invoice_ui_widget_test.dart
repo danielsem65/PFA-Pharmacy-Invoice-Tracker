@@ -250,6 +250,7 @@ void main() {
   });
 
   group('Creating a supplier from the invoice form', () {
+    final Finder form = find.byType(InvoiceFormScreen);
     final Finder invoiceNo = find.widgetWithText(TextFormField, 'Invoice No');
 
     // The search bar holds its text in an input of its own rather than a
@@ -262,21 +263,14 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    // The form is a scrolling list, so the row typed into earlier can be out of
-    // the tree entirely once the search has been used. It is brought back before
-    // being read, which is also the proof that the form kept its state rather
-    // than being built again from nothing.
-    Future<String> invoiceNumberTyped(WidgetTester tester) async {
-      await tester.scrollUntilVisible(
-        invoiceNo,
-        -200,
-        scrollable: find.descendant(
-          of: find.byType(InvoiceFormScreen),
-          matching: find.byType(Scrollable),
-        ),
+    // What makes the form the same form: the same State object, holding the same
+    // controllers. Read as the pair of them rather than by hunting for a field
+    // in a scrolling list, which says nothing the State does not.
+    ({Object state, String number}) formBefore(WidgetTester tester) {
+      return (
+        state: tester.state(form),
+        number: tester.widget<TextFormField>(invoiceNo).controller!.text,
       );
-      await tester.pumpAndSettle();
-      return tester.widget<TextFormField>(invoiceNo).controller!.text;
     }
 
     testWidgets('keeps the half-finished invoice on screen', (tester) async {
@@ -288,6 +282,7 @@ void main() {
       // this is what made the flow unusable.
       await tester.enterText(invoiceNo, 'INV-900');
       await tester.pumpAndSettle();
+      final before = formBefore(tester);
 
       // No supplier matches, so the search offers to make one.
       await searchFor(tester, 'Emerald');
@@ -307,16 +302,17 @@ void main() {
       // Only the dialog closes.
       expect(find.text('New supplier'), findsNothing);
 
-      // The supplier was still created, and is now the one on the invoice.
+      // The supplier was still created.
       expect(store.suppliers.map((s) => s.name), contains('Emerald'));
       expect(
         store.suppliers.firstWhere((s) => s.name == 'Emerald').phone,
         '024 555 0199',
       );
 
-      // And the form is still the form, with the work on it intact.
+      // The form was never torn down, and still holds what was typed on it.
       expect(find.text('New Invoice'), findsOneWidget);
-      expect(await invoiceNumberTyped(tester), 'INV-900');
+      expect(tester.state(form), same(before.state));
+      expect(formBefore(tester).number, 'INV-900');
     });
 
     testWidgets('cancelling the dialog changes nothing at all', (tester) async {
@@ -325,6 +321,7 @@ void main() {
       await openForm(tester);
       await tester.enterText(invoiceNo, 'INV-900');
       await tester.pumpAndSettle();
+      final before = formBefore(tester);
 
       await searchFor(tester, 'Emerald');
       await tester.tap(find.text('Create “Emerald”'));
@@ -335,7 +332,8 @@ void main() {
       expect(find.text('New supplier'), findsNothing);
       expect(store.suppliers.map((s) => s.name), isNot(contains('Emerald')));
       expect(find.text('New Invoice'), findsOneWidget);
-      expect(await invoiceNumberTyped(tester), 'INV-900');
+      expect(tester.state(form), same(before.state));
+      expect(formBefore(tester).number, 'INV-900');
     });
   });
 }
