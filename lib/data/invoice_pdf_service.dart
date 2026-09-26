@@ -367,7 +367,7 @@ pw.MultiPage _classicFormPage(InvoicePrintSheet sheet, PrintFonts f) {
     build: (ctx) => <pw.Widget>[
       _classicDetails(sheet, f),
       pw.SizedBox(height: 14),
-      _classicItems(sheet, f),
+      classicItemsTable(sheet, f),
       pw.SizedBox(height: 12),
       _amountInWords(sheet, f),
       pw.SizedBox(height: 12),
@@ -502,39 +502,87 @@ pw.Widget _classicDetails(InvoicePrintSheet sheet, PrintFonts f) {
   );
 }
 
-pw.Widget _itemsHeaderRow(PrintFonts f) {
-  pw.Widget cell(String label, {int flex = 1, bool right = true}) {
-    return pw.Expanded(
-      flex: flex,
-      child: pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(vertical: 3),
-        child: pw.Text(
-          label.toUpperCase(),
-          textAlign: right ? pw.TextAlign.right : pw.TextAlign.left,
-          style: f.text(7, bold: true, color: _muted, spacing: 0.6),
-        ),
-      ),
-    );
-  }
+/// The classic item table's columns. The table widths and both forms of the
+/// title row are derived from this list, so a title can never drift away from
+/// the column it belongs to.
+const List<({String label, int flex, bool right})> _itemColumns =
+    <({String label, int flex, bool right})>[
+      (label: 'Item', flex: 5, right: false),
+      (label: 'Boxes', flex: 2, right: true),
+      (label: 'Pcs/box', flex: 2, right: true),
+      (label: 'Price/box', flex: 3, right: true),
+      (label: 'Line total', flex: 3, right: true),
+    ];
 
-  return pw.Container(
+/// Width of the row-number column, in points.
+const double _itemIndexWidth = 18;
+
+Map<int, pw.TableColumnWidth> _itemColumnWidths() {
+  return <int, pw.TableColumnWidth>{
+    0: const pw.FixedColumnWidth(_itemIndexWidth),
+    for (var i = 0; i < _itemColumns.length; i++)
+      i + 1: pw.FlexColumnWidth(_itemColumns[i].flex),
+  };
+}
+
+/// A column title. Dark enough to still read on a photocopy, small enough not
+/// to compete with the figures underneath it.
+pw.Widget _itemTitle(String label, PrintFonts f, {bool right = true}) {
+  return pw.Text(
+    label.toUpperCase(),
+    textAlign: right ? pw.TextAlign.right : pw.TextAlign.left,
+    style: f.text(7.5, bold: true, color: _body, spacing: 0.5),
+  );
+}
+
+/// The title row as table cells. It must hold one cell per column: a table row
+/// with fewer cells is laid out in the leading columns only, which squeezes the
+/// whole title bar into the narrow row-number column and it never prints.
+pw.TableRow _itemsHeaderTableRow(PrintFonts f) {
+  return pw.TableRow(
     decoration: const pw.BoxDecoration(
-      border: pw.Border(bottom: pw.BorderSide(color: _rule, width: 0.7)),
+      border: pw.Border(bottom: pw.BorderSide(color: _rule, width: 0.8)),
+    ),
+    children: <pw.Widget>[
+      pw.SizedBox(),
+      for (final column in _itemColumns)
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          child: _itemTitle(column.label, f, right: column.right),
+        ),
+    ],
+  );
+}
+
+/// The same titles as a full-width row, for pages after the first where the
+/// table is not repeated and there is nothing to sit inside.
+pw.Widget _itemsHeaderRow(PrintFonts f) {
+  return pw.Container(
+    padding: const pw.EdgeInsets.only(bottom: 3),
+    decoration: const pw.BoxDecoration(
+      border: pw.Border(bottom: pw.BorderSide(color: _rule, width: 0.8)),
     ),
     child: pw.Row(
       children: <pw.Widget>[
-        pw.SizedBox(width: 18),
-        cell('Item', flex: 5, right: false),
-        cell('Boxes', flex: 2),
-        cell('Pcs/box', flex: 2),
-        cell('Price/box', flex: 3),
-        cell('Line total', flex: 3),
+        pw.SizedBox(width: _itemIndexWidth),
+        for (final column in _itemColumns)
+          pw.Expanded(
+            flex: column.flex,
+            child: pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 2),
+              child: _itemTitle(column.label, f, right: column.right),
+            ),
+          ),
       ],
     ),
   );
 }
 
-pw.Widget _classicItems(InvoicePrintSheet sheet, PrintFonts f) {
+/// The classic layout's item table. Public so a test can check that the title
+/// row lines up with the value columns: a `pw.TableRow` holding fewer cells than
+/// the table has columns is laid out in the leading columns only, which is
+/// exactly how the column titles once went missing from the printed page.
+pw.Widget classicItemsTable(InvoicePrintSheet sheet, PrintFonts f) {
   if (!sheet.hasLines) {
     return _panel(
       pw.Column(
@@ -552,18 +600,9 @@ pw.Widget _classicItems(InvoicePrintSheet sheet, PrintFonts f) {
   }
 
   return pw.Table(
-    columnWidths: const <int, pw.TableColumnWidth>{
-      0: pw.FixedColumnWidth(18),
-      1: pw.FlexColumnWidth(5),
-      2: pw.FlexColumnWidth(2),
-      3: pw.FlexColumnWidth(2),
-      4: pw.FlexColumnWidth(3),
-      5: pw.FlexColumnWidth(3),
-    },
+    columnWidths: _itemColumnWidths(),
     children: <pw.TableRow>[
-      // The column titles live in the table so page one shows them, and in the
-      // page header so every later page repeats them.
-      pw.TableRow(children: <pw.Widget>[_itemsHeaderRow(f)]),
+      _itemsHeaderTableRow(f),
       for (var i = 0; i < sheet.lines.length; i++)
         pw.TableRow(
           children: <pw.Widget>[
@@ -816,18 +855,14 @@ pw.Widget _splitItemsHeader(PrintFonts f) {
       flex: flex,
       child: pw.Padding(
         padding: const pw.EdgeInsets.symmetric(vertical: 3),
-        child: pw.Text(
-          label.toUpperCase(),
-          textAlign: right ? pw.TextAlign.right : pw.TextAlign.left,
-          style: f.text(6.8, bold: true, color: _muted, spacing: 0.5),
-        ),
+        child: _itemTitle(label, f, right: right),
       ),
     );
   }
 
   return pw.Container(
     decoration: const pw.BoxDecoration(
-      border: pw.Border(bottom: pw.BorderSide(color: _rule, width: 0.7)),
+      border: pw.Border(bottom: pw.BorderSide(color: _rule, width: 0.8)),
     ),
     child: pw.Row(
       children: <pw.Widget>[

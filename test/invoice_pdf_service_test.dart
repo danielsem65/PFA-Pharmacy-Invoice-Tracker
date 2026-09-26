@@ -1,8 +1,10 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 import 'package:pfa_pharmacy_invoice_tracker/data/invoice_pdf_service.dart';
+import 'package:pfa_pharmacy_invoice_tracker/data/invoice_print_sheet.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/business_profile.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/print_settings.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/supplier_invoice.dart';
@@ -153,5 +155,31 @@ void main() {
     );
 
     expect(bytes.length, greaterThan(500));
+  });
+
+  test('the classic table gives every value column a title', () {
+    final table = classicItemsTable(
+      buildInvoicePrintSheet(
+        invoice(amountPesewas: 6000, lines: lines(2)),
+        supplier: supplier('s1', 'Pharma Co'),
+        profile: profile,
+        printedOn: printedOn,
+      ),
+      PrintFonts.instance,
+    );
+
+    expect(table, isA<pw.Table>());
+    final rows = (table as pw.Table).children;
+    final valueRow = rows[1];
+
+    // A title row holding fewer cells than the table has columns is laid out in
+    // the leading columns only: the titles get squeezed into the narrow
+    // row-number column and do not appear on the printed page.
+    expect(
+      rows.first.children.length,
+      valueRow.children.length,
+      reason: 'the classic title row must have one cell per value column',
+    );
+    expect(valueRow.children.length, 6, reason: '#, item, boxes, pcs, price, total');
   });
 }
