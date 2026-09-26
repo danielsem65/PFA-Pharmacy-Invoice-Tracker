@@ -38,6 +38,20 @@ class StatusBadge extends StatelessWidget {
     }
   }
 
+  /// The glyph that goes with the word, so the state reads at a glance.
+  static IconData iconOf(InvoiceStatus status) {
+    switch (status) {
+      case InvoiceStatus.paid:
+        return Icons.check_circle_rounded;
+      case InvoiceStatus.overdue:
+        return Icons.error_rounded;
+      case InvoiceStatus.partiallyPaid:
+        return Icons.timelapse_rounded;
+      case InvoiceStatus.open:
+        return Icons.schedule_rounded;
+    }
+  }
+
   Color get _background => colorOf(status);
 
   @override
@@ -53,6 +67,7 @@ class StatusBadge extends StatelessWidget {
         foreground: Colors.white,
         label: status.label,
         glow: color,
+        icon: iconOf(status),
       );
     }
     return _Pill(
@@ -62,6 +77,7 @@ class StatusBadge extends StatelessWidget {
       foreground: inkOf(status),
       label: status.label,
       glow: color,
+      icon: iconOf(status),
     );
   }
 }
@@ -74,6 +90,7 @@ class _Pill extends StatelessWidget {
     required this.foreground,
     required this.label,
     required this.glow,
+    required this.icon,
   });
 
   final List<Color> colors;
@@ -82,6 +99,7 @@ class _Pill extends StatelessWidget {
   final Color foreground;
   final String label;
   final Color glow;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -110,6 +128,8 @@ class _Pill extends StatelessWidget {
               decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
             ),
             const SizedBox(width: 6),
+            Icon(icon, size: 12, color: foreground),
+            const SizedBox(width: 4),
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(

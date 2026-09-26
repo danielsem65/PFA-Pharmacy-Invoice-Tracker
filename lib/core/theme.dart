@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'design.dart';
+
 /// The brand colours the app decorates itself with.
 ///
 /// Roles that carry meaning (primary, error, surfaces) come from a single
@@ -123,12 +125,20 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
     useMaterial3: true,
     brightness: brightness,
     colorScheme: scheme,
+    // The measurements and semantic colours every widget reads instead of
+    // inventing its own.
+    extensions: <ThemeExtension<dynamic>>[AppTokens.forBrightness(brightness)],
     scaffoldBackgroundColor: pageColor,
     fontFamily: 'Segoe UI',
     textTheme: baseTextTheme.copyWith(
       headlineSmall: headline,
       titleMedium: title,
+      titleLarge: baseTextTheme.titleLarge?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.4,
+      ),
       labelLarge: baseTextTheme.labelLarge?.copyWith(letterSpacing: 0.1),
+      labelSmall: baseTextTheme.labelSmall?.copyWith(letterSpacing: 0.2),
     ),
     splashFactory: InkSparkle.splashFactory,
     // A calm fade-and-rise between pages instead of a horizontal slide: it
@@ -140,6 +150,18 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
         TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
         TargetPlatform.macOS: FadeUpwardsPageTransitionsBuilder(),
       },
+    ),
+    // Pointer feedback for the whole app, so a click always answers somewhere
+    // even where a widget paints its own background.
+    hoverColor: scheme.primary.withValues(alpha: isDark ? 0.08 : 0.05),
+    focusColor: scheme.primary.withValues(alpha: 0.12),
+    highlightColor: scheme.primary.withValues(alpha: 0.06),
+    splashColor: scheme.primary.withValues(alpha: 0.10),
+    cursorColor: scheme.primary,
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: scheme.primary,
+      selectionColor: scheme.primary.withValues(alpha: 0.28),
+      selectionHandleColor: scheme.primary,
     ),
     appBarTheme: AppBarTheme(
       backgroundColor: Colors.transparent,
@@ -205,6 +227,14 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
         textStyle: baseTextTheme.labelLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),
+        // A primary action darkens and deepens under the pointer rather than
+        // fading out, so it still reads as a button.
+        overlayColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.pressed)) {
+            return scheme.onPrimary.withValues(alpha: 0.18);
+          }
+          return scheme.onPrimary.withValues(alpha: 0.10);
+        }),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -217,6 +247,9 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
         textStyle: baseTextTheme.labelLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),
+        overlayColor: WidgetStatePropertyAll(
+          scheme.primary.withValues(alpha: 0.08),
+        ),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -225,12 +258,53 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
         textStyle: baseTextTheme.labelLarge?.copyWith(
           fontWeight: FontWeight.w700,
         ),
+        overlayColor: WidgetStatePropertyAll(
+          scheme.primary.withValues(alpha: 0.08),
+        ),
       ),
     ),
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        hoverColor: scheme.primary.withValues(alpha: 0.08),
+        highlightColor: scheme.primary.withValues(alpha: 0.04),
       ),
+    ),
+    checkboxTheme: CheckboxThemeData(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      side: BorderSide(color: scheme.outline.withValues(alpha: 0.7), width: 1.6),
+      fillColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) return scheme.primary;
+        return Colors.transparent;
+      }),
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) return Colors.white;
+        return null;
+      }),
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return scheme.primary.withValues(alpha: 0.75);
+        }
+        return scheme.surfaceContainerHighest;
+      }),
+      trackOutlineColor: WidgetStatePropertyAll(
+        scheme.outlineVariant.withValues(alpha: 0.7),
+      ),
+    ),
+    radioTheme: RadioThemeData(
+      fillColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) return scheme.primary;
+        return scheme.outline;
+      }),
+    ),
+    sliderTheme: SliderThemeData(
+      activeTrackColor: scheme.primary,
+      inactiveTrackColor: scheme.primary.withValues(alpha: 0.18),
+      thumbColor: scheme.primary,
+      overlayColor: scheme.primary.withValues(alpha: 0.12),
+      trackHeight: 5,
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: scheme.primary,
@@ -294,6 +368,8 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
       backgroundColor: isDark ? scheme.surfaceContainerHigh : Colors.white,
       surfaceTintColor: Colors.transparent,
       elevation: 12,
+      barrierColor: _ink.withValues(alpha: isDark ? 0.6 : 0.32),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       titleTextStyle: baseTextTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
       contentTextStyle: baseTextTheme.bodyMedium?.copyWith(
@@ -335,6 +411,9 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
     dataTableTheme: DataTableThemeData(
       headingRowHeight: 46,
       dividerThickness: 0.6,
+      headingRowColor: WidgetStatePropertyAll(
+        scheme.primary.withValues(alpha: 0.04),
+      ),
       headingTextStyle: baseTextTheme.labelMedium?.copyWith(
         fontWeight: FontWeight.w800,
         letterSpacing: 0.4,
@@ -355,14 +434,20 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
       thumbColor: WidgetStatePropertyAll(
         scheme.primary.withValues(alpha: isDark ? 0.35 : 0.28),
       ),
+      trackColor: WidgetStatePropertyAll(
+        scheme.primary.withValues(alpha: isDark ? 0.08 : 0.05),
+      ),
     ),
     tooltipTheme: TooltipThemeData(
+      waitDuration: const Duration(milliseconds: 500),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: isDark ? scheme.inverseSurface : _ink,
         borderRadius: BorderRadius.circular(10),
       ),
       textStyle: baseTextTheme.bodySmall?.copyWith(
         color: Colors.white.withValues(alpha: 0.92),
+        fontWeight: FontWeight.w600,
       ),
     ),
     progressIndicatorTheme: ProgressIndicatorThemeData(

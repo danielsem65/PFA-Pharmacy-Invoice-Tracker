@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/design.dart';
+
 /// The frosted card every list and detail page sits in: a translucent panel
 /// with a soft primary glow, so the aurora behind it shows through faintly.
 /// Shared rather than copied, so a page and the list it belongs to cannot drift
@@ -10,6 +12,7 @@ class GlassPanel extends StatelessWidget {
     required this.child,
     this.radius = 22,
     this.clip = true,
+    this.tint,
   });
 
   final Widget child;
@@ -18,27 +21,14 @@ class GlassPanel extends StatelessWidget {
   /// Set false when the content draws its own corners and must not be clipped.
   final bool clip;
 
+  /// Colours the border and the glow when a panel belongs to one page rather
+  /// than to the app in general.
+  final Color? tint;
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.white.withValues(alpha: 0.72),
-        border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: 0.5),
-        ),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: scheme.primary.withValues(alpha: isDark ? 0.18 : 0.10),
-            blurRadius: 26,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
+      decoration: Frost.panel(context, radius: radius, tint: tint),
       child: clip
           ? ClipRRect(
               borderRadius: BorderRadius.circular(radius),
@@ -74,9 +64,7 @@ class PanelHeader extends StatelessWidget {
           ],
         ),
         border: Border(
-          bottom: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.5),
-          ),
+          bottom: BorderSide(color: AppTokens.of(context).hairline),
         ),
       ),
       child: child,
@@ -99,7 +87,6 @@ TextStyle panelHeadingStyle(BuildContext context) {
         letterSpacing: 0.6,
       );
 }
-
 /// A panel title: a small tinted icon and a name, in the manner of [FormSection]
 /// but sitting on the frosted panel rather than in a form.
 class PanelTitle extends StatelessWidget {

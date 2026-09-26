@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../core/design.dart';
 import '../core/theme.dart';
 import 'aurora_background.dart';
+import 'ui_kit.dart';
 
 /// The heading every page opens with: a glassy panel with a glowing icon, the
 /// page name, a line of context, and the actions for that page.
@@ -14,6 +16,7 @@ class PageHeader extends StatelessWidget {
     this.accentIndex = 0,
     this.actions = const <Widget>[],
     this.leading,
+    this.meta = const <Widget>[],
   });
 
   final String title;
@@ -23,18 +26,22 @@ class PageHeader extends StatelessWidget {
   final List<Widget> actions;
   final Widget? leading;
 
+  /// Small pills under the title: counts and warnings worth naming outright.
+  final List<Widget> meta;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final texts = Theme.of(context).textTheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = Aurora.accent(accentIndex);
+    final tokens = AppTokens.of(context);
 
     return FadeSlideIn(
       child: Container(
         padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(tokens.radiusLg),
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -65,29 +72,10 @@ class PageHeader extends StatelessWidget {
                     const SizedBox(width: 14),
                   ],
                   if (icon != null)
-                    Container(
-                      width: 48,
-                      height: 48,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: <Color>[
-                            accent,
-                            Aurora.accent(accentIndex + 3),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: <BoxShadow>[
-                          BoxShadow(
-                            color: accent.withValues(alpha: 0.45),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: Icon(icon, color: Colors.white, size: 24),
+                    IconTile(
+                      icon: icon!,
+                      accentIndex: accentIndex,
+                      size: TileSize.large,
                     ),
                 ],
               ),
@@ -114,6 +102,14 @@ class PageHeader extends StatelessWidget {
                         texts.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                if (meta.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 9),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: meta,
                   ),
                 ],
               ],
@@ -145,6 +141,7 @@ class PageHeader extends StatelessWidget {
             // Expanded on the heading is what holds the buttons against the
             // right edge; the SizedBox is only there so the gap is not zero.
             return Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 mark,
                 Expanded(child: heading),
@@ -171,6 +168,7 @@ class EmptyState extends StatelessWidget {
     required this.message,
     this.accentIndex = 0,
     this.action,
+    this.secondary,
   });
 
   final IconData icon;
@@ -178,6 +176,7 @@ class EmptyState extends StatelessWidget {
   final String message;
   final int accentIndex;
   final Widget? action;
+  final Widget? secondary;
 
   @override
   Widget build(BuildContext context) {
@@ -187,21 +186,21 @@ class EmptyState extends StatelessWidget {
 
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 380),
+        constraints: const BoxConstraints(maxWidth: 400),
         child: FadeSlideIn(
           offset: 20,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               SizedBox(
-                width: 120,
-                height: 120,
+                width: 132,
+                height: 132,
                 child: ParticleDrift(
                   color: accent.withValues(alpha: 0.55),
                   child: Center(
                     child: Container(
-                      width: 78,
-                      height: 78,
+                      width: 82,
+                      height: 82,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
@@ -215,8 +214,15 @@ class EmptyState extends StatelessWidget {
                           color: accent.withValues(alpha: 0.35),
                           width: 1.5,
                         ),
+                        boxShadow: <BoxShadow>[
+                          BoxShadow(
+                            color: accent.withValues(alpha: 0.25),
+                            blurRadius: 26,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
                       ),
-                      child: Icon(icon, size: 34, color: accent),
+                      child: Icon(icon, size: 36, color: accent),
                     ),
                   ),
                 ),
@@ -236,9 +242,17 @@ class EmptyState extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
-              if (action != null) ...<Widget>[
+              if (action != null || secondary != null) ...<Widget>[
                 const SizedBox(height: 20),
-                action!,
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  alignment: WrapAlignment.center,
+                  children: <Widget>[
+                    if (action != null) action!,
+                    if (secondary != null) secondary!,
+                  ],
+                ),
               ],
             ],
           ),
