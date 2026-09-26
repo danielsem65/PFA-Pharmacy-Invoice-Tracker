@@ -226,12 +226,12 @@ void main() {
 
       // Held to a reading width rather than stretched across the window, and
       // centred in whatever space it is given. The wrapper fills the window; the
-      // block inside it is the 720 the form is measured by.
+      // first ConstrainedBox inside it is the one that does the holding, the
+      // rest belonging to the fields further down.
       final wrapper = find.byType(ReadingWidth);
-      final block = find.descendant(
-        of: wrapper,
-        matching: find.byType(ConstrainedBox),
-      );
+      final block = find
+          .descendant(of: wrapper, matching: find.byType(ConstrainedBox))
+          .first;
       expect(tester.getSize(block).width, 720);
       expect(
         tester.getRect(block).center.dx,
