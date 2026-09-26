@@ -1,0 +1,74 @@
+name: Nightly Build
+
+# The main pipeline is deliberately narrow: it only runs for main, and it
+# publishes a release. This one exists so a working branch can be built and
+# tried on a real machine without touching main or cutting a release. Push any
+# feature branch and a Windows build turns up as the "Nightly PFA" artifact.
+on:
+  push:
+    branches-ignore:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze-test:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test
+        run: flutter test
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Create Windows platform files
+        run: |
+          flutter create --platforms=windows --no-overwrite . --org com.pfa --project-name pfa_pharmacy_invoice_tracker
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Package Windows build
+        shell: pwsh
+        run: |
+          $asset = "Nightly-PFA.zip"
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath $asset
+          $sha = "${{ github.sha }}"
+          $short = $sha.Substring(0, 7)
+          $branch = "${{ github.ref_name }}"
+          "Build of $branch at $short" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          Write-Output "Built $branch at $short"
+
+      - name: Upload the build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Nightly PFA
+          path: Nightly-PFA.zip
+          if-no-files-found: error
