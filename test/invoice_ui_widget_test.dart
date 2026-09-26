@@ -318,7 +318,7 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Create'));
       await tester.pump();
       // ignore: avoid_print
-      print('DIAG frame1 ${diag(tester)});
+      print('DIAG frame1 ${diag(tester)}');
       await tester.pumpAndSettle();
 
       // Only the dialog closes.
