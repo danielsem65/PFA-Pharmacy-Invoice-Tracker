@@ -55,7 +55,9 @@ class PageHeader extends StatelessWidget {
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final mark = Row(
+            final mark = Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 if (leading != null) ...<Widget>[
@@ -84,7 +86,6 @@ class PageHeader extends StatelessWidget {
                     ),
                     child: Icon(icon, color: Colors.white, size: 24),
                   ),
-                  const SizedBox(width: 16),
                 ],
               ],
             );
@@ -138,6 +139,8 @@ class PageHeader extends StatelessWidget {
               );
             }
 
+            // Expanded on the heading is what holds the buttons against the
+            // right edge; the SizedBox is only there so the gap is not zero.
             return Row(
               children: <Widget>[
                 mark,

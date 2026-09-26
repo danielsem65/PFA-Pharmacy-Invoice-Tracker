@@ -12,6 +12,7 @@ class StatCard extends StatelessWidget {
     required this.icon,
     required this.gradient,
     this.compact = false,
+    this.width,
     this.delay = Duration.zero,
   });
 
@@ -20,6 +21,10 @@ class StatCard extends StatelessWidget {
   final IconData icon;
   final List<Color> gradient;
   final bool compact;
+
+  /// Fixed width when a caller wants an even row of tiles; null lets the card
+  /// grow to whatever the label needs, so nothing is cut short.
+  final double? width;
   final Duration delay;
 
   static final List<Color> primary = <Color>[Aurora.teal, Aurora.indigo];
@@ -32,13 +37,12 @@ class StatCard extends StatelessWidget {
     final texts = Theme.of(context).textTheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final lead = gradient.isEmpty ? scheme.primary : gradient.first;
-    final width = compact ? 88.0 : 120.0;
 
     return FadeSlideIn(
       delay: delay,
       child: Container(
         width: width,
-        constraints: const BoxConstraints(minHeight: 92),
+        constraints: const BoxConstraints(minWidth: 96, minHeight: 92),
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
@@ -77,9 +81,10 @@ class StatCard extends StatelessWidget {
                     style: texts.labelSmall?.copyWith(
                       color: scheme.onSurfaceVariant,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: 0.6,
+                      fontSize: compact ? 10 : 11,
+                      letterSpacing: 0.3,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -96,7 +101,8 @@ class StatCard extends StatelessWidget {
                 style: texts.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.6,
-                  fontSize: compact ? 18 : 22,
+                  fontSize: compact ? 17 : 21,
+                  height: 1.05,
                   color: scheme.onSurface,
                 ),
               ),

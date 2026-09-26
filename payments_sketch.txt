@@ -1,0 +1,31 @@
+﻿Payments screen sketch (current)
+
+HEADER (top bar)
+┌─────────────────────────────────────────────────────────────────────────┐
+│ [Payments icon] Payments                [Export]  [Record payment]  │
+│                 0 payments recorded                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+       ↑                                    ↑                        ↑
+    left side                        middle-ish?            right side
+                                                         (should be far right)
+
+FILTERS
+┌─────────────────────────────┬─────────────────────────────────────┐
+│ [Search payments…]          │ [All suppliers ▼]                  │
+└─────────────────────────────┴─────────────────────────────────────┘
+
+STATS (4 cards in a wrap)
+┌────────────┬────────────┬───────────┬───────────────────┐
+│Total paid  │Still owed  │Overdue    │Paid this month    │
+│TOTA..      │STILL..     │OVER..     │PAID ...           │
+└────────────┴────────────┴───────────┴───────────────────┘
+
+TABLE
+┌───────────────────────────────────────────────────────────────────────┐
+│ Date | Supplier | Settled | Method | Amount | (delete)             │
+│ ...                                                              │
+└───────────────────────────────────────────────────────────────────────┘
+
+PROBLEMS
+1. StatCard width fixed to 120px (non-compact). Label is UPPERCASE and ellipsizes. Padding + icon + spacing leave little room for full text like 'PAID THIS MONTH'. Also FittedBox only affects value, not label. 
+2. PageHeader actions: in wide layout we return Row with mark + Expanded(heading) + buttons. That should push buttons to far right. But 620px breakpoint drops them below; maybe user wants them always at far right unless very cramped? Or the Expanded on heading is correct but maybe on some widths it looks centered. Alternatively give heading min width or just ensure mainAxisAlignment spaceBetween? Or use Spacer() after heading instead of Expanded in a way that competes.
