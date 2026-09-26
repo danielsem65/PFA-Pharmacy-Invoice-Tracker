@@ -623,7 +623,7 @@ void main() {
       expect(find.text('No payments yet'), findsOneWidget);
 
       await tapIconEnd(tester, 'Overview');
-      expect(find.text('Nothing to summarise yet'), findsOneWidget);
+      expect(find.byType(OverviewScreen), findsOneWidget);
     });
 
     // The invoice form covers the whole window, sidebar and all, so each end

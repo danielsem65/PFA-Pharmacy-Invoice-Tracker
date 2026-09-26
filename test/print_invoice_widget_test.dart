@@ -9,15 +9,30 @@ import 'package:pfa_pharmacy_invoice_tracker/features/settings/print_settings_co
 import 'package:pfa_pharmacy_invoice_tracker/models/business_profile.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/print_settings.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/supplier_invoice.dart';
+import 'package:pfa_pharmacy_invoice_tracker/widgets/app_sidebar.dart';
 import 'package:pfa_pharmacy_invoice_tracker/widgets/more_menu_button.dart';
 
 import 'helpers.dart';
 
 void main() {
+  // The app opens on the Overview, so anything that wants the invoice list asks
+  // for it by name rather than assuming where it landed.
+  Future<void> openInvoices(WidgetTester tester) async {
+    final box = tester.getRect(
+      find.descendant(
+        of: find.byType(AppSidebar),
+        matching: find.text('Invoices'),
+      ),
+    );
+    await tester.tapAt(Offset(box.left - 26, box.center.dy));
+    await tester.pumpAndSettle();
+  }
+
   Future<InMemoryLocalStore> pumpApp(
     WidgetTester tester,
     InMemoryLocalStore store, {
     Size size = const Size(900, 1400),
+    bool landOnInvoices = true,
   }) async {
     await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -28,6 +43,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    if (landOnInvoices) await openInvoices(tester);
     return store;
   }
 
