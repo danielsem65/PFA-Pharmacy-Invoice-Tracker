@@ -9,6 +9,7 @@ import '../../models/supplier.dart';
 import '../../models/supplier_invoice.dart';
 import '../../widgets/export_actions.dart';
 import '../../widgets/aurora_background.dart';
+import '../../widgets/glass_panel.dart';
 import '../../widgets/more_menu_button.dart';
 import '../../widgets/page_header.dart';
 import '../../widgets/stat_card.dart';
@@ -444,28 +445,9 @@ class _InvoiceTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.white.withValues(alpha: 0.72),
-        border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: 0.5),
-        ),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: scheme.primary.withValues(alpha: isDark ? 0.18 : 0.10),
-            blurRadius: 26,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+      child: GlassPanel(
         child: Column(
           children: [
             _HeaderRow(selectionMode: selectionMode),
@@ -504,12 +486,7 @@ class _HeaderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final style = Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: scheme.onSurfaceVariant,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.6,
-        );
+    final style = panelHeadingStyle(context);
     Widget cell(String label, {double flex = 1, TextAlign align = TextAlign.left}) {
       return Expanded(
         flex: flex ~/ 1,
@@ -526,18 +503,8 @@ class _HeaderRow extends StatelessWidget {
       );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: <Color>[
-            scheme.primary.withValues(alpha: 0.10),
-            scheme.primary.withValues(alpha: 0.04),
-          ],
-        ),
-        border: Border(
-          bottom: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-        ),
-      ),
+    return PanelHeader(
+      padding: EdgeInsets.zero,
       child: Row(
         children: [
           if (selectionMode) const SizedBox(width: 18),
