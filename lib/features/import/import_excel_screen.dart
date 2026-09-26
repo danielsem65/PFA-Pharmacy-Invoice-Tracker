@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design.dart';
 import '../../core/format.dart';
 import '../../data/excel_service.dart';
 import '../../widgets/desktop_form.dart';
 import '../../widgets/export_actions.dart';
+import '../../widgets/page_header.dart';
 import '../../widgets/toast.dart';
 import '../invoices/invoices_controller.dart';
 import '../suppliers/suppliers_controller.dart';
@@ -93,35 +95,27 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
   }
 
   Widget _header(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final texts = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 18, 20, 14),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Import from Excel',
-                  style: texts.headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _fileName == null
-                      ? 'Bring an existing .xlsx invoice sheet into the app'
-                      : '$_fileName — check the columns, then import',
-                  style: texts.bodySmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
+      padding: const EdgeInsets.fromLTRB(Insets.xxl, 18, Insets.xl, 14),
+      child: PageHeader(
+        title: 'Import from Excel',
+        subtitle: _fileName == null
+            ? 'Bring an existing .xlsx invoice sheet into the app'
+            : '$_fileName — check the columns, then import',
+        icon: Icons.upload_file,
+        accentIndex: 3,
+        leading: IconButton(
+          tooltip: 'Back',
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/');
+            }
+          },
+        ),
+        actions: <Widget>[
           OutlinedButton.icon(
             key: const Key('choose-excel-file'),
             onPressed: _importing ? null : _chooseFile,

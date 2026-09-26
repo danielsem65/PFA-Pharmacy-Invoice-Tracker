@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/theme.dart';
+import '../../core/design.dart';
 import '../../models/business_profile.dart';
 import '../../models/print_settings.dart';
 import '../../widgets/aurora_background.dart';
 import '../../widgets/page_header.dart';
 import '../../widgets/toast.dart';
+import '../../widgets/ui_kit.dart';
 import 'business_profile_controller.dart';
 import 'print_settings_controller.dart';
 
@@ -78,18 +79,104 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (mounted) toast(context, 'Business details saved.');
   }
 
+  /// The pharmacy's own details, laid out one field per line except the phone
+  /// and email, which share a row when the window is wide enough to hold them.
+  Widget _profileForm() {
+    return Form(
+      key: _formKey,
+      child: Column(
+        children: <Widget>[
+          TextFormField(
+            controller: _name,
+            decoration: const InputDecoration(
+              labelText: 'Business name',
+              hintText: 'PFA Pharmacy',
+            ),
+            onChanged: (_) => _dirty = true,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: Insets.md),
+          TextFormField(
+            controller: _address,
+            decoration: const InputDecoration(
+              labelText: 'Address',
+              hintText: 'Street, town',
+            ),
+            onChanged: (_) => _dirty = true,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: Insets.md),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final phone = TextFormField(
+                controller: _phone,
+                decoration: const InputDecoration(
+                  labelText: 'Phone',
+                ),
+                onChanged: (_) => _dirty = true,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+              );
+              final email = TextFormField(
+                controller: _email,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                ),
+                onChanged: (_) => _dirty = true,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+              );
+              if (constraints.maxWidth < 520) {
+                return Column(
+                  children: <Widget>[
+                    phone,
+                    const SizedBox(height: Insets.md),
+                    email,
+                  ],
+                );
+              }
+              return Row(
+                children: <Widget>[
+                  Expanded(child: phone),
+                  const SizedBox(width: Insets.md),
+                  Expanded(child: email),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: Insets.md),
+          TextFormField(
+            controller: _tin,
+            decoration: const InputDecoration(
+              labelText: 'TIN',
+              helperText: 'Shown after the address when filled in',
+            ),
+            onChanged: (_) => _dirty = true,
+            textInputAction: TextInputAction.done,
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(businessProfileProvider);
     final printSettings = ref.watch(printSettingsProvider);
     _seed(profile);
 
+    final saveButton = FilledButton.icon(
+      onPressed: _saveProfile,
+      icon: const Icon(Icons.save_outlined),
+      label: const Text('Save details'),
+    );
+
     return Scaffold(
       body: ListView(
-        padding: const EdgeInsets.only(bottom: 28),
+        padding: const EdgeInsets.only(bottom: Insets.huge),
         children: <Widget>[
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+            padding: Insets.page,
             child: PageHeader(
               title: 'Settings',
               subtitle: 'Your details on every printed invoice',
@@ -106,149 +193,69 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   }
                 },
               ),
-              actions: <Widget>[
-                FilledButton.icon(
-                  onPressed: _saveProfile,
-                  icon: const Icon(Icons.save_outlined),
-                  label: const Text('Save details'),
-                ),
-              ],
+              actions: <Widget>[saveButton],
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            padding: const EdgeInsets.fromLTRB(Insets.xxl, Insets.lg, Insets.xxl, 0),
             child: FadeSlideIn(
               delay: const Duration(milliseconds: 70),
-              child: _Card(
+              child: SectionCard(
                 title: 'Business details',
-                subtitle:
-                    'Printed at the top of the invoice. Leave a field blank and '
-                    'it is left off the page.',
+                subtitle: 'Printed at the top of the invoice. Leave a field '
+                    'blank and it is left off the page.',
                 icon: Icons.storefront_outlined,
                 accentIndex: 0,
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: <Widget>[
-                      TextFormField(
-                        controller: _name,
-                        decoration: const InputDecoration(
-                          labelText: 'Business name',
-                          hintText: 'PFA Pharmacy',
-                        ),
-                        onChanged: (_) => _dirty = true,
-                        textInputAction: TextInputAction.next,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _address,
-                        decoration: const InputDecoration(
-                          labelText: 'Address',
-                          hintText: 'Street, town',
-                        ),
-                        onChanged: (_) => _dirty = true,
-                        textInputAction: TextInputAction.next,
-                      ),
-                      const SizedBox(height: 12),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final phone = TextFormField(
-                            controller: _phone,
-                            decoration: const InputDecoration(
-                              labelText: 'Phone',
-                            ),
-                            onChanged: (_) => _dirty = true,
-                            keyboardType: TextInputType.phone,
-                            textInputAction: TextInputAction.next,
-                          );
-                          final email = TextFormField(
-                            controller: _email,
-                            decoration: const InputDecoration(
-                              labelText: 'Email',
-                            ),
-                            onChanged: (_) => _dirty = true,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                          );
-                          if (constraints.maxWidth < 520) {
-                            return Column(
-                              children: <Widget>[
-                                phone,
-                                const SizedBox(height: 12),
-                                email,
-                              ],
-                            );
-                          }
-                          return Row(
-                            children: <Widget>[
-                              Expanded(child: phone),
-                              const SizedBox(width: 12),
-                              Expanded(child: email),
-                            ],
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _tin,
-                        decoration: const InputDecoration(
-                          labelText: 'TIN',
-                          helperText: 'Shown after the address when filled in',
-                        ),
-                        onChanged: (_) => _dirty = true,
-                        textInputAction: TextInputAction.done,
-                      ),
-                      const SizedBox(height: 18),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: FilledButton.icon(
-                          onPressed: _saveProfile,
-                          icon: const Icon(Icons.save_outlined),
-                          label: const Text('Save details'),
-                        ),
-                      ),
-                    ],
+                children: <Widget>[
+                  _profileForm(),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: saveButton,
                   ),
-                ),
+                ],
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            padding: const EdgeInsets.fromLTRB(Insets.xxl, Insets.lg, Insets.xxl, 0),
             child: FadeSlideIn(
               delay: const Duration(milliseconds: 130),
-              child: _Card(
+              child: SectionCard(
                 title: 'Printing',
-                subtitle:
-                    'Which layout the Print button uses. "Ask each time" opens '
-                    'the picker every time you print.',
+                subtitle: 'Which layout the Print button uses. "Ask each time" '
+                    'opens the picker every time you print.',
                 icon: Icons.print_outlined,
                 accentIndex: 1,
-                child: _LayoutChoice(
-                  settings: printSettings,
-                  onChanged: (layout) =>
-                      ref.read(printSettingsProvider.notifier).setDefaultLayout(layout),
-                ),
+                children: <Widget>[
+                  _LayoutChoice(
+                    settings: printSettings,
+                    onChanged: (layout) => ref
+                        .read(printSettingsProvider.notifier)
+                        .setDefaultLayout(layout),
+                  ),
+                ],
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            padding: const EdgeInsets.fromLTRB(Insets.xxl, Insets.lg, Insets.xxl, 0),
             child: FadeSlideIn(
               delay: const Duration(milliseconds: 190),
-              child: _Card(
+              child: SectionCard(
                 title: 'Data',
                 subtitle: 'Everything is stored on this PC only.',
                 icon: Icons.lock_outline,
                 accentIndex: 2,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.go('/'),
-                    icon: const Icon(Icons.receipt_long_outlined),
-                    label: const Text('Back to invoices'),
+                children: <Widget>[
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.go('/'),
+                      icon: const Icon(Icons.receipt_long_outlined),
+                      label: const Text('Back to invoices'),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
@@ -258,6 +265,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 }
 
+/// The print layouts, each one a row you press, with the chosen one lit up.
 class _LayoutChoice extends StatelessWidget {
   const _LayoutChoice({required this.settings, required this.onChanged});
 
@@ -274,27 +282,39 @@ class _LayoutChoice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        _option(
+          'Ask each time',
+          'Open the layout picker when you print. Nothing is remembered.',
+          null,
+        ),
+        for (final layout in InvoicePrintLayout.values)
+          _option(layout.label, layout.blurb, layout),
+      ],
+    );
+  }
+
+  Widget _option(String label, String blurb, InvoicePrintLayout? value) {
     final scheme = Theme.of(context).colorScheme;
     final texts = Theme.of(context).textTheme;
+    final selected = settings.defaultLayout == value;
 
-    Widget option(
-      String label,
-      String blurb,
-      InvoicePrintLayout? value,
-    ) {
-      final selected = settings.defaultLayout == value;
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Insets.sm),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
           onTap: () => onChanged(value),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           child: Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(Insets.md),
             decoration: BoxDecoration(
               color: selected
                   ? scheme.primary.withValues(alpha: 0.10)
                   : scheme.surfaceContainerHighest.withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: selected ? scheme.primary : scheme.outlineVariant,
                 width: selected ? 1.6 : 1,
@@ -308,7 +328,7 @@ class _LayoutChoice extends StatelessWidget {
                   size: 20,
                   color: selected ? scheme.primary : null,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: Insets.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,72 +353,6 @@ class _LayoutChoice extends StatelessWidget {
             ),
           ),
         ),
-      );
-    }
-
-    return Column(
-      children: <Widget>[
-        option(
-          'Ask each time',
-          'Open the layout picker when you print. Nothing is remembered.',
-          null,
-        ),
-        for (final layout in InvoicePrintLayout.values)
-          option(layout.label, layout.blurb, layout),
-      ],
-    );
-  }
-}
-
-class _Card extends StatelessWidget {
-  const _Card({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.accentIndex,
-    required this.child,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final int accentIndex;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final texts = Theme.of(context).textTheme;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: 0.6),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Icon(icon, size: 20, color: Aurora.accent(accentIndex)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  title,
-                  style: texts.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(subtitle, style: texts.bodySmall?.copyWith(height: 1.4)),
-          const SizedBox(height: 16),
-          child,
-        ],
       ),
     );
   }
