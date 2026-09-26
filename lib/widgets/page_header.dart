@@ -53,75 +53,102 @@ class PageHeader extends StatelessWidget {
             y: 10,
           ),
         ),
-        child: Row(
-          children: <Widget>[
-            if (leading != null) ...<Widget>[leading!, const SizedBox(width: 14)],
-            if (icon != null) ...<Widget>[
-              Container(
-                width: 48,
-                height: 48,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: <Color>[accent, Aurora.accent(accentIndex + 3)],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final mark = Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (leading != null) ...<Widget>[
+                  leading!,
+                  const SizedBox(width: 14),
+                ],
+                if (icon != null) ...<Widget>[
+                  Container(
+                    width: 48,
+                    height: 48,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: <Color>[accent, Aurora.accent(accentIndex + 3)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: <BoxShadow>[
+                        BoxShadow(
+                          color: accent.withValues(alpha: 0.45),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Icon(icon, color: Colors.white, size: 24),
                   ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: accent.withValues(alpha: 0.45),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+                  const SizedBox(width: 16),
+                ],
+              ],
+            );
+
+            final heading = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  title,
+                  style: texts.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                child: Icon(icon, color: Colors.white, size: 24),
-              ),
-              const SizedBox(width: 16),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
+                if (subtitle != null) ...<Widget>[
+                  const SizedBox(height: 3),
                   Text(
-                    title,
-                    style: texts.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                    ),
+                    subtitle!,
+                    style:
+                        texts.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (subtitle != null) ...<Widget>[
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle!,
-                      style: texts.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
                 ],
-              ),
-            ),
-            if (actions.isNotEmpty) ...<Widget>[
-              const SizedBox(width: 12),
-              // Flexible, so a window too narrow for both buttons wraps them
-              // onto a second line instead of running off the edge.
-              Flexible(
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: actions,
-                ),
-              ),
-            ],
-          ],
+              ],
+            );
+
+            final buttons = Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: actions,
+            );
+
+            // Wide enough for the buttons beside the title: they hug the right
+            // edge. Narrower than that and they take a line of their own, so a
+            // squeezed window never runs them off the side.
+            if (actions.isNotEmpty && constraints.maxWidth < 620) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[mark, Expanded(child: heading)],
+                  ),
+                  const SizedBox(height: 12),
+                  Align(alignment: Alignment.centerRight, child: buttons),
+                ],
+              );
+            }
+
+            return Row(
+              children: <Widget>[
+                mark,
+                Expanded(child: heading),
+                if (actions.isNotEmpty) ...<Widget>[
+                  const SizedBox(width: 12),
+                  buttons,
+                ],
+              ],
+            );
+          },
         ),
       ),
     );
