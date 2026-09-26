@@ -9,13 +9,17 @@ import 'glass.dart';
 /// page behind it can never show through, because a colour has no way to blur
 /// what is under it. A dialog is the one surface in a desktop app that is
 /// guaranteed to be floating over content, so it is the one place the glass
-/// has to be real rather than implied — this builds the route by hand and puts
-/// a [BackdropFilter] in the middle of it.
+/// has to be real rather than implied.
+///
+/// The trick is to let [Dialog] keep doing everything it is good at — centring,
+/// insets, getting out of the way of the keyboard, sizing itself to its
+/// content — and replace only the part it cannot do, which is the material. The
+/// dialog's own background is switched off and a [GlassSurface] is put behind
+/// its content instead, so the [BackdropFilter] ends up between the page and
+/// the text.
 ///
 /// The arguments match [showDialog], so swapping one for the other changes
-/// nothing a caller can observe. Dialogs built with [AlertDialog] keep their own
-/// padding and layout: only the flat background is taken away from them, by a
-/// [Theme] override scoped to the dialog's own subtree.
+/// nothing a caller can observe.
 Future<T?> showGlassDialog<T>({
   required BuildContext context,
   required WidgetBuilder builder,
@@ -23,84 +27,56 @@ Future<T?> showGlassDialog<T>({
   Color? barrierColor,
   String? barrierLabel,
 }) {
-  return showGeneralDialog<T>(
+  return showDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
-    barrierLabel: barrierLabel ??
-        MaterialLocalizations.of(context).modalBarrierDismissLabel,
-    barrierColor: barrierColor ?? Colors.black.withValues(alpha: 0.52),
-    transitionDuration: const Duration(milliseconds: 200),
-    pageBuilder: (context, _, __) {
-      return _GlassDialogPane(
-        child: Theme(
-          data: Theme.of(context).copyWith(
-            // The pane below is the dialog's surface. Left alone, AlertDialog
-            // would paint an opaque rectangle on top of the very thing it is
-            // floating on.
-            dialogTheme: const DialogThemeData(
-              backgroundColor: Colors.transparent,
-              surfaceTintColor: Colors.transparent,
-              elevation: 0,
-              insetPadding: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(),
-            ),
-            // The same reason: a dialog is a glass pane, not a sheet of paper.
-            canvasColor: Colors.transparent,
-          ),
-          // Built under both the pane and the override, so the caller's context
-          // sees the same ancestors it would see under a Dialog.
-          child: Builder(builder: builder),
-        ),
-      );
-    },
-    transitionBuilder: (context, animation, _, child) {
-      final curved = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
-      );
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-          // Dropping in from slightly small and settling, the way a sheet of
-          // glass lands on a desk. A straight fade reads as a web popup.
-          scale: Tween<double>(begin: 0.955, end: 1).animate(curved),
-          child: child,
-        ),
-      );
-    },
-  );
-}
-
-/// Centres and bounds a dialog the way [Dialog] would, then frosts it.
-class _GlassDialogPane extends StatelessWidget {
-  const _GlassDialogPane({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final media = MediaQuery.of(context);
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+    barrierColor: barrierColor,
+    barrierLabel: barrierLabel,
+    builder: (context) {
+      final media = MediaQuery.of(context);
+      return Dialog(
+        // The glass behind the content is the dialog's surface now.
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        // The pane brings its own margin, so Dialog must not add a second one.
+        insetPadding: EdgeInsets.zero,
+        shape: const RoundedRectangleBorder(),
         child: Center(
           child: ConstrainedBox(
+            // The same ceiling Dialog applies on its own, so a dialog never
+            // grows past the window it is floating in. Wide enough for the
+            // receipt viewer, which is the widest thing the app puts in one.
             constraints: BoxConstraints(
-              // The same ceiling Dialog applies, so a dialog never grows past
-              // the window it is floating in. Wide enough for the receipt
-              // viewer, which is the widest thing the app ever puts in one.
               maxWidth: 720,
               maxHeight: media.size.height - media.padding.vertical - 48,
             ),
             child: GlassSurface(
               level: GlassLevel.ultra,
               radius: 24,
-              child: child,
+              child: Theme(
+                data: Theme.of(context).copyWith(
+                  // An AlertDialog is the usual thing being shown here, and it
+                  // is a Dialog itself. Left alone it would paint a second
+                  // opaque rectangle on top of the very pane it is sitting in.
+                  dialogTheme: const DialogThemeData(
+                    backgroundColor: Colors.transparent,
+                    surfaceTintColor: Colors.transparent,
+                    elevation: 0,
+                    insetPadding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(),
+                  ),
+                  // A dialog is a glass pane, not a sheet of paper.
+                  canvasColor: Colors.transparent,
+                ),
+                // Built under both the pane and the override, so the caller's
+                // context sees the same ancestors it would see under a Dialog.
+                child: Builder(builder: builder),
+              ),
             ),
           ),
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
 }
