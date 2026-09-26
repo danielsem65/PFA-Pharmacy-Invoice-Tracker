@@ -2,19 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../models/payment.dart';
-import '../../widgets/aurora_background.dart';
 import '../../widgets/export_actions.dart';
 import '../../widgets/page_header.dart';
 import '../../widgets/stat_card.dart';
+import '../../widgets/ui_kit.dart';
 import '../invoices/invoices_controller.dart';
 import '../suppliers/suppliers_controller.dart';
 import 'payments_controller.dart';
 
-/// Every payment made, newest first, with the running totals worked out across
-/// all the invoices rather than one row at a time.
+/// The room the undo mark takes at the end of a row.
+const double _undoGutter = 40;
+
 class PaymentsScreen extends ConsumerStatefulWidget {
   const PaymentsScreen({super.key});
 
@@ -31,7 +33,6 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     final payments = ref.watch(paymentsProvider);
     final invoices = ref.watch(invoicesProvider);
     final suppliers = ref.watch(suppliersProvider);
-    final scheme = Theme.of(context).colorScheme;
 
     String supplierNameOf(String supplierId) {
       for (final s in suppliers) {
@@ -67,7 +68,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     }
 
     final q = _query.trim().toLowerCase();
-    final visible = [
+    final visible = <Payment>[
       for (final p in payments)
         if (matchesSupplier(p))
           if (q.isEmpty ||
@@ -96,15 +97,20 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
       }
     }
 
-    final thisMonth = payments
-        .where((p) => p.date.year == now.year && p.date.month == now.month)
-        .fold(0, (sum, p) => sum + p.amountPesewas);
+    var thisMonthCount = 0;
+    var thisMonth = 0;
+    for (final p in payments) {
+      if (p.date.year != now.year || p.date.month != now.month) continue;
+      thisMonth += p.amountPesewas;
+      thisMonthCount++;
+    }
 
     return Scaffold(
       body: Column(
-        children: [
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+            padding: Insets.page,
             child: PageHeader(
               title: 'Payments',
               subtitle: payments.isEmpty
@@ -113,7 +119,14 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                       '${payments.length == 1 ? 'payment' : 'payments'} recorded',
               icon: Icons.payments_outlined,
               accentIndex: 4,
-              actions: [
+              meta: <Widget>[
+                MiniPill(
+                  '$thisMonthCount this month',
+                  icon: Icons.event_available_outlined,
+                  dense: true,
+                ),
+              ],
+              actions: <Widget>[
                 OutlinedButton.icon(
                   onPressed: payments.isEmpty
                       ? null
@@ -135,86 +148,46 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
-            child: FadeSlideIn(
-              delay: const Duration(milliseconds: 60),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  color: scheme.surface.withValues(alpha: 0.55),
-                  border: Border.all(
-                    color: scheme.outlineVariant.withValues(alpha: 0.5),
+            padding: const EdgeInsets.fromLTRB(Insets.xxl, Insets.md, Insets.xxl, 0),
+            child: FilterBar(
+              delay: const Duration(milliseconds: 70),
+              children: <Widget>[
+                SearchField(
+                  hint: 'Search payments…',
+                  onChanged: (v) => setState(() => _query = v),
+                ),
+                FilterSelect<String>(
+                  buttonKey: const Key('payments-supplier-filter'),
+                  value: _supplierFilter,
+                  hint: 'All suppliers',
+                  items: <DropdownMenuItem<String>>[
+                    const DropdownMenuItem<String>(
+                      value: 'all',
+                      child: Text('All suppliers'),
+                    ),
+                    for (final s in suppliers)
+                      DropdownMenuItem<String>(
+                        value: s.id,
+                        child: Text(s.name),
+                      ),
+                  ],
+                  onChanged: (v) => setState(
+                    () => _supplierFilter = v ?? 'all',
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 4,
-                      child: TextField(
-                        decoration: const InputDecoration(
-                          hintText: 'Search payments…',
-                          prefixIcon: Icon(Icons.search),
-                          isDense: true,
-                        ),
-                        onChanged: (v) => setState(() => _query = v),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Flexible(
-                      flex: 1,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color:
-                                  scheme.outlineVariant.withValues(alpha: 0.7),
-                            ),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: DropdownButton<String>(
-                            key: const Key('payments-supplier-filter'),
-                            value: _supplierFilter,
-                            hint: const Text('All suppliers'),
-                            underline: const SizedBox.shrink(),
-                            borderRadius: BorderRadius.circular(14),
-                            items: [
-                              const DropdownMenuItem<String>(
-                                value: 'all',
-                                child: Text('All suppliers'),
-                              ),
-                              for (final s in suppliers)
-                                DropdownMenuItem<String>(
-                                  value: s.id,
-                                  child: Text(s.name),
-                                ),
-                            ],
-                            onChanged: (v) => setState(
-                              () => _supplierFilter = v ?? 'all',
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+            padding: const EdgeInsets.fromLTRB(Insets.xxl, Insets.md, Insets.xxl, 0),
             child: Row(
-              children: [
+              children: <Widget>[
                 Expanded(
                   child: StatCard(
                     label: 'Total paid',
                     value: formatPesewas(paidTotal),
                     icon: Icons.savings_outlined,
-                    gradient: const <Color>[Aurora.emerald, Aurora.teal],
+                    gradient: StatCard.money,
                     delay: const Duration(milliseconds: 120),
                   ),
                 ),
@@ -224,7 +197,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                     label: 'Still owed',
                     value: formatPesewas(outstandingTotal),
                     icon: Icons.account_balance_wallet_outlined,
-                    gradient: const <Color>[Aurora.indigo, Aurora.sky],
+                    gradient: StatCard.primary,
                     delay: const Duration(milliseconds: 190),
                   ),
                 ),
@@ -234,7 +207,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                     label: 'Overdue',
                     value: formatPesewas(overdueTotal),
                     icon: Icons.warning_amber_rounded,
-                    gradient: const <Color>[Aurora.rose, Aurora.amber],
+                    gradient: StatCard.danger,
                     delay: const Duration(milliseconds: 260),
                   ),
                 ),
@@ -244,22 +217,49 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                     label: 'Paid this month',
                     value: formatPesewas(thisMonth),
                     icon: Icons.event_available_outlined,
-                    gradient: const <Color>[Aurora.violet, Aurora.pink],
+                    gradient: StatCard.neutral,
                     delay: const Duration(milliseconds: 330),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: Insets.md),
           Expanded(
             child: visible.isEmpty
                 ? _EmptyPayments(hasAny: payments.isNotEmpty)
-                : _PaymentsTable(
-                    payments: visible,
-                    supplierNameFor: supplierOfInvoice,
-                    invoiceNumberFor: invoiceNumberOf,
-                    onRemove: (p) => _confirmRemove(context, p),
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      Insets.xxl,
+                      0,
+                      Insets.xxl,
+                      Insets.xxl,
+                    ),
+                    child: TableScaffold(
+                      header: const _PaymentHeadings(),
+                      footer: _PaymentsFooter(
+                        shown: visible.length,
+                        total: payments.length,
+                      ),
+                      body: ListView.builder(
+                        padding: EdgeInsets.zero,
+                        itemCount: visible.length,
+                        itemBuilder: (context, index) {
+                          final p = visible[index];
+                          return _PaymentRow(
+                            payment: p,
+                            supplierName: p.invoiceIds.isEmpty
+                                ? '—'
+                                : supplierOfInvoice(p.invoiceIds.first),
+                            numbers: <String>[
+                              for (final id in p.invoiceIds) invoiceNumberOf(id),
+                            ],
+                            accentIndex: index,
+                            onTap: () => _confirmRemove(context, p),
+                          );
+                        },
+                      ),
+                    ),
                   ),
           ),
         ],
@@ -278,14 +278,14 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
           'The ${formatPesewas(payment.amountPesewas)} will go back onto '
           '$count ${count == 1 ? 'invoice' : 'invoices'} as outstanding.',
         ),
-        actions: [
+        actions: <Widget>[
           TextButton(
-            child: const Text('Cancel'),
             onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
           ),
           FilledButton(
-            child: const Text('Delete'),
             onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -297,118 +297,20 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
       a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
-class _PaymentsTable extends StatelessWidget {
-  const _PaymentsTable({
-    required this.payments,
-    required this.supplierNameFor,
-    required this.invoiceNumberFor,
-    required this.onRemove,
-  });
-
-  final List<Payment> payments;
-  final String Function(String invoiceId) supplierNameFor;
-  final String Function(String invoiceId) invoiceNumberFor;
-  final ValueChanged<Payment> onRemove;
+class _PaymentHeadings extends StatelessWidget {
+  const _PaymentHeadings();
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final texts = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final headerStyle = texts.labelSmall?.copyWith(
-      color: scheme.onSurfaceVariant,
-      fontWeight: FontWeight.w800,
-      letterSpacing: 0.8,
-    );
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.white.withValues(alpha: 0.72),
-        border:
-            Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Aurora.violet.withValues(alpha: isDark ? 0.18 : 0.10),
-            blurRadius: 26,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: Column(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: <Color>[
-                    scheme.primary.withValues(alpha: 0.10),
-                    scheme.primary.withValues(alpha: 0.04),
-                  ],
-                ),
-                border: Border(
-                  bottom: BorderSide(
-                    color: scheme.outlineVariant.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                child: Row(
-                  children: [
-                    Expanded(flex: 18, child: Text('Date', style: headerStyle)),
-                    Expanded(
-                      flex: 26,
-                      child: Text('Supplier', style: headerStyle),
-                    ),
-                    Expanded(
-                      flex: 24,
-                      child: Text('Settled', style: headerStyle),
-                    ),
-                    Expanded(
-                      flex: 14,
-                      child: Text('Method', style: headerStyle),
-                    ),
-                    Expanded(
-                      flex: 18,
-                      child: Text(
-                        'Amount',
-                        textAlign: TextAlign.right,
-                        style: headerStyle,
-                      ),
-                    ),
-                    const SizedBox(width: 29),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: payments.length,
-                itemBuilder: (context, index) {
-                  final p = payments[index];
-                  return _PaymentRow(
-                    payment: p,
-                    supplierName: p.invoiceIds.isEmpty
-                        ? '—'
-                        : supplierNameFor(p.invoiceIds.first),
-                    numbers: [
-                      for (final id in p.invoiceIds) invoiceNumberFor(id),
-                    ],
-                    accentIndex: index,
-                    onTap: () => onRemove(p),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+    return const Row(
+      children: <Widget>[
+        ColumnHeading('Date', flex: 16),
+        ColumnHeading('Supplier', flex: 26),
+        ColumnHeading('Settled', flex: 24),
+        ColumnHeading('Method', flex: 14),
+        ColumnHeading('Amount', flex: 16, trailing: true),
+        SizedBox(width: _undoGutter),
+      ],
     );
   }
 }
@@ -432,124 +334,130 @@ class _PaymentRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final texts = Theme.of(context).textTheme;
-    final colors = Aurora.pair(accentIndex + 4);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        hoverColor: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 18,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: colors,
-                        ),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            formatDate(payment.date),
-                            style: texts.bodyMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          if (payment.isLegacy)
-                            Text(
-                              'Opening balance',
-                              style: texts.labelSmall?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                                fontStyle: FontStyle.italic,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                flex: 26,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      supplierName,
-                      style: texts.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (payment.reference.isNotEmpty)
-                      Text(
-                        payment.reference,
-                        style: texts.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
-                ),
-              ),
-              Expanded(
-                flex: 24,
-                child: Text(
-                  numbers.isEmpty ? '—' : numbers.join(', '),
-                  style: texts.bodySmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
+    return HoverRow(
+      onTap: onTap,
+      onSecondaryTap: onTap,
+      stripe: Aurora.accent(accentIndex + 4),
+      child: Row(
+        children: <Widget>[
+          TableCellBox(
+            flex: 16,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  formatDate(payment.date),
+                  style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              Expanded(
-                flex: 14,
-                child: Text(
-                  payment.method,
-                  style: texts.bodySmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
+                if (payment.isLegacy)
+                  Text(
+                    'Opening balance',
+                    style: texts.labelSmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          TableCellBox(
+            flex: 26,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  supplierName,
+                  style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              Expanded(
-                flex: 18,
-                child: Text(
-                  formatPesewas(payment.amountPesewas),
-                  textAlign: TextAlign.right,
-                  style: texts.bodyMedium?.copyWith(fontWeight: FontWeight.w800),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                if (payment.reference.isNotEmpty)
+                  Text(
+                    payment.reference,
+                    style: texts.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          TableCellBox(
+            flex: 24,
+            child: Text(
+              numbers.isEmpty ? '—' : numbers.join(', '),
+              style: texts.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          TableCellBox(
+            flex: 14,
+            child: Text(
+              payment.method,
+              style: texts.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          TableCellBox(
+            flex: 16,
+            align: CrossAxisAlignment.end,
+            child: Money(payment.amountPesewas, tone: MoneyTone.strong),
+          ),
+          SizedBox(
+            width: _undoGutter,
+            child: Icon(
+              Icons.undo,
+              size: 17,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentsFooter extends StatelessWidget {
+  const _PaymentsFooter({required this.shown, required this.total});
+
+  final int shown;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      children: <Widget>[
+        Icon(
+          Icons.receipt_long_outlined,
+          size: 14,
+          color: scheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Text(
+            shown == total
+                ? '$shown of $total shown'
+                : '$shown of $total shown, filtered',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Icon(Icons.undo, size: 17, color: scheme.onSurfaceVariant),
-            ],
           ),
         ),
-      ),
+      ],
     );
   }
 }

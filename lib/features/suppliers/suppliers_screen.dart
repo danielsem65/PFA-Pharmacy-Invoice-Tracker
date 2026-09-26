@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/design.dart';
 import '../../core/format.dart';
-import '../../core/theme.dart';
 import '../../models/supplier.dart';
-import '../../widgets/aurora_background.dart';
 import '../../widgets/page_header.dart';
+import '../../widgets/stat_card.dart';
+import '../../widgets/ui_kit.dart';
 import '../invoices/invoices_controller.dart';
 import 'suppliers_controller.dart';
+
+/// The room the chevron takes at the end of a row.
+const double _chevronGutter = 40;
 
 class SuppliersScreen extends ConsumerStatefulWidget {
   const SuppliersScreen({super.key});
@@ -25,12 +29,13 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
     final suppliers = ref.watch(suppliersProvider);
     final invoices = ref.watch(invoicesProvider);
 
-    int owedBy(Supplier s) {
-      var total = 0;
-      for (final inv in invoices) {
-        if (inv.supplierId == s.id) total += inv.balancePesewas;
+    final owed = <String, int>{};
+    final billed = <String, int>{};
+    for (final inv in invoices) {
+      billed[inv.supplierId] = (billed[inv.supplierId] ?? 0) + 1;
+      if (inv.balancePesewas > 0) {
+        owed[inv.supplierId] = (owed[inv.supplierId] ?? 0) + inv.balancePesewas;
       }
-      return total;
     }
 
     final q = _query.trim().toLowerCase();
@@ -38,18 +43,34 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
         .where((s) => q.isEmpty || s.name.toLowerCase().contains(q))
         .toList();
 
+    var totalOwed = 0;
+    var owingCount = 0;
+    for (final s in suppliers) {
+      final amount = owed[s.id] ?? 0;
+      if (amount <= 0) continue;
+      totalOwed += amount;
+      owingCount++;
+    }
+
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        children: <Widget>[
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+            padding: Insets.page,
             child: PageHeader(
               title: 'Suppliers',
-              subtitle:
-                  '${suppliers.length} ${suppliers.length == 1 ? 'distributor' : 'distributors'} you buy stock from',
+              subtitle: '${suppliers.length} '
+                  '${suppliers.length == 1 ? 'distributor' : 'distributors'} you buy stock from',
               icon: Icons.local_shipping,
-              accentIndex: 1,
+              accentIndex: 2,
+              meta: <Widget>[
+                MiniPill(
+                  '$owingCount still owing',
+                  icon: Icons.account_balance_wallet_outlined,
+                  dense: true,
+                ),
+              ],
               actions: <Widget>[
                 FilledButton.icon(
                   onPressed: () => context.go('/suppliers/new'),
@@ -60,32 +81,84 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
-            child: FadeSlideIn(
+            padding: const EdgeInsets.fromLTRB(Insets.xxl, Insets.md, Insets.xxl, 0),
+            child: FilterBar(
               delay: const Duration(milliseconds: 70),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: const InputDecoration(
-                        hintText: 'Search suppliers…',
-                        prefixIcon: Icon(Icons.search),
-                        isDense: true,
-                      ),
-                      onChanged: (v) => setState(() => _query = v),
-                    ),
-                  ),
-                ],
-              ),
+              children: <Widget>[
+                SearchField(
+                  hint: 'Search suppliers…',
+                  onChanged: (v) => setState(() => _query = v),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 18),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Insets.xxl, Insets.md, Insets.xxl, 0),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: StatCard(
+                    label: 'Owed to suppliers',
+                    value: formatPesewas(totalOwed),
+                    icon: Icons.account_balance_wallet_outlined,
+                    gradient: StatCard.primary,
+                    delay: const Duration(milliseconds: 120),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: StatCard(
+                    label: 'With a balance',
+                    value: '$owingCount',
+                    icon: Icons.pending_actions_outlined,
+                    gradient: StatCard.warn,
+                    delay: const Duration(milliseconds: 190),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: StatCard(
+                    label: 'Suppliers',
+                    value: '${suppliers.length}',
+                    icon: Icons.local_shipping_outlined,
+                    gradient: StatCard.neutral,
+                    delay: const Duration(milliseconds: 260),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: Insets.md),
           Expanded(
             child: visible.isEmpty
                 ? const _EmptySuppliers()
-                : _SupplierTable(
-                    suppliers: visible,
-                    owedBy: owedBy,
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      Insets.xxl,
+                      0,
+                      Insets.xxl,
+                      Insets.xxl,
+                    ),
+                    child: TableScaffold(
+                      header: const _SupplierHeadings(),
+                      footer: _SupplierFooter(
+                        shown: visible.length,
+                        total: suppliers.length,
+                      ),
+                      body: ListView.builder(
+                        padding: EdgeInsets.zero,
+                        itemCount: visible.length,
+                        itemBuilder: (context, index) {
+                          final s = visible[index];
+                          return _SupplierRow(
+                            supplier: s,
+                            owed: owed[s.id] ?? 0,
+                            invoices: billed[s.id] ?? 0,
+                            accentIndex: index,
+                          );
+                        },
+                      ),
+                    ),
                   ),
           ),
         ],
@@ -94,105 +167,19 @@ class _SuppliersScreenState extends ConsumerState<SuppliersScreen> {
   }
 }
 
-class _SupplierTable extends StatelessWidget {
-  const _SupplierTable({required this.suppliers, required this.owedBy});
-
-  final List<Supplier> suppliers;
-  final int Function(Supplier) owedBy;
+class _SupplierHeadings extends StatelessWidget {
+  const _SupplierHeadings();
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final headerStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: scheme.onSurfaceVariant,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.4,
-        );
-
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.white.withValues(alpha: 0.72),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Aurora.sky.withValues(alpha: isDark ? 0.18 : 0.10),
-            blurRadius: 26,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: Column(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: <Color>[
-                    scheme.primary.withValues(alpha: 0.10),
-                    scheme.primary.withValues(alpha: 0.04),
-                  ],
-                ),
-                border: Border(
-                  bottom: BorderSide(
-                    color: scheme.outlineVariant.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 30,
-                      child: Text('Supplier',
-                          style: headerStyle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                    Expanded(
-                      flex: 22,
-                      child: Text('Contact',
-                          style: headerStyle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                    Expanded(
-                      flex: 18,
-                      child: Text(
-                        'Outstanding',
-                        textAlign: TextAlign.right,
-                        style: headerStyle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 56),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: suppliers.length,
-                itemBuilder: (context, index) {
-                  final s = suppliers[index];
-                  return _SupplierRow(
-                    supplier: s,
-                    owed: owedBy(s),
-                    accentIndex: index,
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+    return const Row(
+      children: <Widget>[
+        ColumnHeading('Supplier', flex: 34),
+        ColumnHeading('Contact', flex: 26),
+        ColumnHeading('Invoices', flex: 12),
+        ColumnHeading('Outstanding', flex: 16, trailing: true),
+        SizedBox(width: _chevronGutter),
+      ],
     );
   }
 }
@@ -201,11 +188,13 @@ class _SupplierRow extends StatelessWidget {
   const _SupplierRow({
     required this.supplier,
     required this.owed,
+    required this.invoices,
     required this.accentIndex,
   });
 
   final Supplier supplier;
   final int owed;
+  final int invoices;
   final int accentIndex;
 
   @override
@@ -215,159 +204,112 @@ class _SupplierRow extends StatelessWidget {
     final contact = [supplier.phone, supplier.location]
         .where((e) => e.trim().isNotEmpty)
         .join(' · ');
+    final settled = owed <= 0;
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => context.go('/suppliers/${supplier.id}/edit'),
-          hoverColor: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    return HoverRow(
+      onTap: () => context.go('/suppliers/${supplier.id}/edit'),
+      stripe: settled ? AppTokens.of(context).success : AppTokens.of(context).warning,
+      child: Row(
+        children: <Widget>[
+          TableCellBox(
+            flex: 34,
             child: Row(
-              children: [
-                    Expanded(
-                      flex: 30,
-                      child: Row(
-                        children: [
-                          _Avatar(name: supplier.name, accentIndex: accentIndex),
-                          const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              supplier.name,
-                              style: texts.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (supplier.notes.trim().isNotEmpty)
-                              Text(
-                                supplier.notes,
-                                style: texts.bodySmall
-                                    ?.copyWith(color: scheme.onSurfaceVariant),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                          ],
+              children: <Widget>[
+                AvatarTile(name: supplier.name, accentIndex: accentIndex),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        supplier.name,
+                        style: texts.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      if (supplier.notes.trim().isNotEmpty)
+                        Text(
+                          supplier.notes,
+                          style: texts.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                     ],
                   ),
                 ),
-                Expanded(
-                  flex: 22,
-                  child: Text(
-                    contact.isEmpty ? '—' : contact,
-                    style: texts.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Expanded(
-                  flex: 18,
-                  child: owed > 0
-                      ? Align(
-                          alignment: Alignment.centerRight,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: <Color>[Aurora.rose, Aurora.amber],
-                              ),
-                              borderRadius: BorderRadius.circular(999),
-                              boxShadow: <BoxShadow>[
-                                BoxShadow(
-                                  color: Aurora.rose.withValues(alpha: 0.3),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              formatPesewas(owed),
-                              style: texts.labelSmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        )
-                      : Align(
-                          alignment: Alignment.centerRight,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: Aurora.emerald.withValues(alpha: 0.14),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: Aurora.emerald.withValues(alpha: 0.4),
-                              ),
-                            ),
-                            child: Text(
-                              'Settled',
-                              style: texts.labelMedium?.copyWith(
-                                color: const Color(0xFF046C4E),
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ),
-                ),
-                const SizedBox(width: 12),
-                Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
               ],
             ),
           ),
-        ),
+          TableCellBox(
+            flex: 26,
+            child: Text(
+              contact.isEmpty ? '—' : contact,
+              style: texts.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          TableCellBox(
+            flex: 12,
+            child: Text(
+              '$invoices',
+              style: texts.bodyMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          TableCellBox(
+            flex: 16,
+            align: CrossAxisAlignment.end,
+            child: settled
+                ? MiniPill(
+                    'Settled',
+                    color: AppTokens.of(context).success,
+                    dense: true,
+                  )
+                : Money(
+                    owed,
+                    tone: MoneyTone.strong,
+                    color: scheme.error,
+                  ),
+          ),
+          SizedBox(
+            width: _chevronGutter,
+            child: Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.name, required this.accentIndex});
+class _SupplierFooter extends StatelessWidget {
+  const _SupplierFooter({required this.shown, required this.total});
 
-  final String name;
-  final int accentIndex;
+  final int shown;
+  final int total;
 
   @override
   Widget build(BuildContext context) {
-    final letter = name.trim().isEmpty ? '?' : name.trim()[0].toUpperCase();
-    final colors = Aurora.pair(accentIndex);
-    return Container(
-      width: 40,
-      height: 40,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: colors,
-        ),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: colors.first.withValues(alpha: 0.35),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    final scheme = Theme.of(context).colorScheme;
+    return Text(
+      shown == total ? '$shown of $total shown' : '$shown of $total shown, filtered',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
           ),
-        ],
-      ),
-      child: Text(
-        letter,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-            ),
-      ),
     );
   }
 }
@@ -381,7 +323,7 @@ class _EmptySuppliers extends StatelessWidget {
       icon: Icons.local_shipping_outlined,
       title: 'No suppliers yet',
       message: 'Add the distributors you buy medicines from.',
-      accentIndex: 1,
+      accentIndex: 2,
     );
   }
 }
