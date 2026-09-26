@@ -64,16 +64,13 @@ class PrintFonts {
   static PrintFonts get instance => _instance ??= _load();
 
   static PrintFonts _load() {
-    final windowsDir =
-        Platform.environment['WINDIR'] ?? r'C:\Windows'.replaceAll(r'\', '/');
+    final windowsDir = Platform.environment['WINDIR'] ?? 'C:/Windows';
     try {
       final regular = File('$windowsDir/Fonts/segoeui.ttf');
       if (regular.existsSync()) {
         return PrintFonts._(
-          pw.Font.ttf(regular.readAsBytesSync()),
-          pw.Font.ttf(
-            File('$windowsDir/Fonts/segoeuib.ttf').readAsBytesSync(),
-          ),
+          pw.Font.ttf(_fontData(regular)),
+          pw.Font.ttf(_fontData(File('$windowsDir/Fonts/segoeuib.ttf'))),
           true,
         );
       }
@@ -81,6 +78,12 @@ class PrintFonts {
       // No usable system font: the base-14 fonts below always work.
     }
     return PrintFonts._(pw.Font.helvetica(), pw.Font.helveticaBold(), false);
+  }
+
+  /// [pw.Font.ttf] wants a [ByteData] view, not a bare byte list.
+  static ByteData _fontData(File file) {
+    final bytes = file.readAsBytesSync();
+    return bytes.buffer.asByteData(bytes.offsetInBytes, bytes.lengthInBytes);
   }
 
   pw.TextStyle text(
@@ -107,12 +110,12 @@ class PrintFonts {
 }
 
 // The monochrome palette. Nothing here is colourful, on purpose.
-const PdfColors _ink = PdfColors.black;
-const PdfColors _muted = PdfColors.grey600;
-const PdfColors _rule = PdfColors.grey600;
-const PdfColors _hairline = PdfColors.grey400;
-const PdfColors _wash = PdfColors.grey200;
-const PdfColors _paper = PdfColors.white;
+const PdfColor _ink = PdfColors.black;
+const PdfColor _muted = PdfColors.grey600;
+const PdfColor _rule = PdfColors.grey600;
+const PdfColor _hairline = PdfColors.grey400;
+const PdfColor _wash = PdfColors.grey200;
+const PdfColor _paper = PdfColors.white;
 
 const PdfPageFormat _a4 = PdfPageFormat.a4;
 
@@ -338,7 +341,7 @@ pw.Widget _businessName(InvoicePrintSheet sheet, PrintFonts f, {double size = 15
 // Layout 1: classic form.
 // ---------------------------------------------------------------------------
 
-pw.Widget _classicFormPage(InvoicePrintSheet sheet, PrintFonts f) {
+pw.MultiPage _classicFormPage(InvoicePrintSheet sheet, PrintFonts f) {
   return pw.MultiPage(
     pageFormat: _a4,
     margin: const pw.EdgeInsets.fromLTRB(_margin, _margin, _margin, _margin),
@@ -534,13 +537,13 @@ pw.Widget _classicItems(InvoicePrintSheet sheet, PrintFonts f) {
   }
 
   return pw.Table(
-    columnWidths: <int, pw.TableColumnWidth>{
-      0: const pw.TableColumnWidth(fixed: 18),
-      1: const pw.TableColumnWidth(flex: 5),
-      2: const pw.TableColumnWidth(flex: 2),
-      3: const pw.TableColumnWidth(flex: 2),
-      4: const pw.TableColumnWidth(flex: 3),
-      5: const pw.TableColumnWidth(flex: 3),
+    columnWidths: const <int, pw.TableColumnWidth>{
+      0: pw.FixedColumnWidth(18),
+      1: pw.FlexColumnWidth(5),
+      2: pw.FlexColumnWidth(2),
+      3: pw.FlexColumnWidth(2),
+      4: pw.FlexColumnWidth(3),
+      5: pw.FlexColumnWidth(3),
     },
     children: <pw.TableRow>[
       // The column titles live in the table so page one shows them, and in the
@@ -628,7 +631,7 @@ pw.Widget _classicBottom(InvoicePrintSheet sheet, PrintFonts f) {
 // get the wide side of the page.
 // ---------------------------------------------------------------------------
 
-pw.Widget _splitLedgerPage(InvoicePrintSheet sheet, PrintFonts f) {
+pw.Page _splitLedgerPage(InvoicePrintSheet sheet, PrintFonts f) {
   // A two-column page cannot flow across a page break, so an invoice with a
   // long item list falls back to the same rail laid out as a top strip with
   // the items running full width underneath.
@@ -662,7 +665,7 @@ pw.Widget _splitLedgerPage(InvoicePrintSheet sheet, PrintFonts f) {
   );
 }
 
-pw.Widget _splitLedgerLongPage(InvoicePrintSheet sheet, PrintFonts f) {
+pw.MultiPage _splitLedgerLongPage(InvoicePrintSheet sheet, PrintFonts f) {
   return pw.MultiPage(
     pageFormat: _a4,
     margin: const pw.EdgeInsets.fromLTRB(_margin, _margin, _margin, _margin),
@@ -915,7 +918,7 @@ pw.Widget _splitItems(
 /// the document always stays on one page.
 const int _voucherMaxLines = 12;
 
-pw.Widget _paymentVoucherPage(InvoicePrintSheet sheet, PrintFonts f) {
+pw.Page _paymentVoucherPage(InvoicePrintSheet sheet, PrintFonts f) {
   final lines = sheet.lines.length > _voucherMaxLines
       ? sheet.lines.sublist(0, _voucherMaxLines)
       : sheet.lines;
@@ -1072,9 +1075,9 @@ pw.Widget _voucherItems(
 
   return pw.Table(
     columnWidths: const <int, pw.TableColumnWidth>{
-      0: pw.TableColumnWidth(flex: 6),
-      1: pw.TableColumnWidth(flex: 2),
-      2: pw.TableColumnWidth(flex: 3),
+      0: pw.FlexColumnWidth(6),
+      1: pw.FlexColumnWidth(2),
+      2: pw.FlexColumnWidth(3),
     },
     children: <pw.TableRow>[
       pw.TableRow(

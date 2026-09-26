@@ -141,13 +141,13 @@ Future<void> layoutInvoicePrint(
     // Drawing an A4 page locally takes milliseconds, so there is no spinner to
     // show. The Windows print window then opens on top with the page ready.
     final printed = await Printing.layoutPdf(
-      (format) => buildInvoicePdf(
+      onLayout: (format) => buildInvoicePdf(
         invoice,
         supplier: supplier,
         profile: profile,
         layout: layout,
       ),
-      name: '${invoice.invoiceNumber} — ${layout.label}.pdf',
+      name: '${invoice.invoiceNumber} — ${layout.label}',
     );
     if (context.mounted && printed) {
       toast(context, 'Sent to printer.');

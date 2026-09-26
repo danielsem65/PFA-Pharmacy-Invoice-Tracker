@@ -248,7 +248,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await container.read(printSettingsProvider.future);
+      await pumpEventQueue();
       expect(container.read(printSettingsProvider).defaultLayout, isNull);
 
       await container
@@ -272,7 +272,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await container.read(businessProfileProvider.future);
+      await pumpEventQueue();
       expect(container.read(businessProfileProvider).isEmpty, isTrue);
 
       await container.read(businessProfileProvider.notifier).save(
