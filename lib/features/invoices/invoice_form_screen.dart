@@ -169,55 +169,13 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
   Future<void> _createSupplier(String name) async {
     final nameTrimmed = name.trim();
     if (nameTrimmed.isEmpty) return;
-    final nameCtrl = TextEditingController(text: nameTrimmed);
-    final phoneCtrl = TextEditingController();
-    final locationCtrl = TextEditingController();
 
+    // Cancelled means null, which is not an error: nothing was created, so
+    // there is nothing to select.
     final created = await showGlassDialog<Supplier>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('New supplier'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(labelText: 'Supplier name'),
-            ),
-            TextField(
-              controller: phoneCtrl,
-              decoration: const InputDecoration(labelText: 'Phone (optional)'),
-            ),
-            TextField(
-              controller: locationCtrl,
-              decoration: const InputDecoration(labelText: 'Location (optional)'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(
-              Supplier.create(
-                nameCtrl.text.trim(),
-                phone: phoneCtrl.text.trim(),
-                location: locationCtrl.text.trim(),
-              ),
-            ),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
+      builder: (context) => NewSupplierDialog(initialName: nameTrimmed),
     );
-
-    nameCtrl.dispose();
-    phoneCtrl.dispose();
-    locationCtrl.dispose();
-
-    // Cancelled: nothing was created, so there is nothing to select.
     if (created == null) return;
     await ref.read(suppliersProvider.notifier).add(created);
     final s = ref
@@ -1414,6 +1372,81 @@ class _ProductLookupDialogState extends ConsumerState<_ProductLookupDialog> {
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
+        ),
+      ],
+    );
+  }
+}
+
+/// The "New supplier" dialog.
+///
+/// A [StatefulWidget] purely so the three fields can have controllers that live
+/// exactly as long as the dialog does. Building them in the calling method meant
+/// disposing them as soon as the dialog returned, which is before the closing
+/// animation has finished - the [TextField]s were still being built during that
+/// animation and threw "a TextEditingController was used after being disposed"
+/// from inside the navigator, which tore the page behind the dialog down with
+/// it. Building them inline instead, as a new controller on every rebuild, threw
+/// away whatever had been typed. Owning them here is the only arrangement where
+/// both are impossible.
+class NewSupplierDialog extends StatefulWidget {
+  const NewSupplierDialog({required this.initialName, super.key});
+
+  final String initialName;
+
+  @override
+  State<NewSupplierDialog> createState() => _NewSupplierDialogState();
+}
+
+class _NewSupplierDialogState extends State<NewSupplierDialog> {
+  late final TextEditingController _name =
+      TextEditingController(text: widget.initialName);
+  final TextEditingController _phone = TextEditingController();
+  final TextEditingController _location = TextEditingController();
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _phone.dispose();
+    _location.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('New supplier'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _name,
+            decoration: const InputDecoration(labelText: 'Supplier name'),
+          ),
+          TextField(
+            controller: _phone,
+            decoration: const InputDecoration(labelText: 'Phone (optional)'),
+          ),
+          TextField(
+            controller: _location,
+            decoration: const InputDecoration(labelText: 'Location (optional)'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(
+            Supplier.create(
+              _name.text.trim(),
+              phone: _phone.text.trim(),
+              location: _location.text.trim(),
+            ),
+          ),
+          child: const Text('Create'),
         ),
       ],
     );

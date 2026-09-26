@@ -328,7 +328,8 @@ void main() {
         '024 555 0199',
       );
 
-      // The form was never torn down, and still holds what was typed on it.
+      // ignore: avoid_print
+      print(diag(tester));
       // The form is still the one that was there before, holding what was typed.
       expect(form, findsOneWidget);
       expect(tester.state(form), same(before.state));
