@@ -1,7 +1,7 @@
 name: pfa_pharmacy_invoice_tracker
 description: "PFA Pharmacy Invoice Tracker: offline supplier invoice keeper for Windows — accounts payable, receipts, CSV export, ZIP backup, self-update."
 publish_to: "none"
-version: 1.2.10+11
+version: 1.2.11+12
 
 environment:
   sdk: ">=3.5.0 <4.0.0"
