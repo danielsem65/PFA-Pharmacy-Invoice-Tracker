@@ -60,6 +60,9 @@ class MoreMenuButton extends ConsumerWidget {
           case _MenuAction.exportCsvProducts:
             exportProductsCsv(context, ref, productScope: visibleProducts);
             break;
+          case _MenuAction.settings:
+            context.go('/settings');
+            break;
           case _MenuAction.checkUpdates:
             runUpdateFlow(context, ref);
             break;
@@ -122,6 +125,14 @@ class MoreMenuButton extends ConsumerWidget {
         ),
         const PopupMenuDivider(),
         const PopupMenuItem(
+          value: _MenuAction.settings,
+          child: ListTile(
+            leading: Icon(Icons.tune),
+            title: Text('Settings…'),
+          ),
+        ),
+        const PopupMenuDivider(),
+        const PopupMenuItem(
           value: _MenuAction.checkUpdates,
           child: ListTile(
             leading: Icon(Icons.system_update_alt),
@@ -170,6 +181,7 @@ enum _MenuAction {
   exportCsvInvoices,
   exportCsvSuppliers,
   exportCsvProducts,
+  settings,
   checkUpdates,
   about,
 }

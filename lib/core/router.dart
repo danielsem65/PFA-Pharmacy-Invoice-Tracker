@@ -11,6 +11,7 @@ import '../features/payments/payment_form_screen.dart';
 import '../features/payments/payments_screen.dart';
 import '../features/products/product_form_screen.dart';
 import '../features/products/products_screen.dart';
+import '../features/settings/settings_screen.dart';
 import '../features/suppliers/supplier_form_screen.dart';
 import '../features/suppliers/suppliers_screen.dart';
 import '../widgets/app_sidebar.dart';
@@ -58,6 +59,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'import',
                     parentNavigatorKey: _rootNavigatorKey,
                     builder: (context, state) => const ImportExcelScreen(),
+                  ),
+                  GoRoute(
+                    path: 'settings',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => const SettingsScreen(),
                   ),
                 ],
               ),

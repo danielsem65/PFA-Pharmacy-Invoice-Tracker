@@ -9,6 +9,7 @@ import '../../core/theme.dart';
 import '../../data/receipt_storage.dart';
 import '../../models/supplier_invoice.dart';
 import '../../widgets/aurora_background.dart';
+import '../../widgets/print_invoice_action.dart';
 import '../../widgets/status_badge.dart';
 import 'invoices_controller.dart';
 import '../suppliers/suppliers_controller.dart';
@@ -52,6 +53,11 @@ class InvoiceDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(inv.invoiceNumber),
         actions: [
+          IconButton(
+            tooltip: 'Print',
+            icon: const Icon(Icons.print_outlined),
+            onPressed: () => printInvoice(context, ref, inv),
+          ),
           IconButton(
             tooltip: 'Edit',
             icon: const Icon(Icons.edit_outlined),

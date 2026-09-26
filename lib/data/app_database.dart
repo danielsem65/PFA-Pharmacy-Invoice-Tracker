@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/business_profile.dart';
 import '../models/payment.dart';
+import '../models/print_settings.dart';
 import '../models/product.dart';
 import '../models/supplier.dart';
 import '../models/supplier_invoice.dart';
@@ -46,6 +48,13 @@ abstract class LocalStore {
   Future<void> saveProducts(List<Product> products);
   Future<void> savePayments(List<Payment> payments);
 
+  /// Single records rather than lists. These are small and easy to retype, so
+  /// they have no safety copy — a bad read just falls back to the default.
+  Future<BusinessProfile> loadProfile();
+  Future<void> saveProfile(BusinessProfile profile);
+  Future<PrintSettings> loadPrintSettings();
+  Future<void> savePrintSettings(PrintSettings settings);
+
   /// Non-null when the last load hit damaged data. The list is only
   /// non-empty once per app run, so the UI can warn exactly once.
   String? get loadWarning;
@@ -58,6 +67,8 @@ class SharedPrefsLocalStore implements LocalStore {
   static const _invoicesKey = 'pfa.invoices.v1';
   static const _productsKey = 'pfa.products.v1';
   static const _paymentsKey = 'pfa.payments.v1';
+  static const _profileKey = 'pfa.profile.v1';
+  static const _printSettingsKey = 'pfa.print.v1';
   static const _backupSuffix = '.bak';
 
   final KeyValueStore _prefs;
@@ -105,6 +116,49 @@ class SharedPrefsLocalStore implements LocalStore {
         _paymentsKey,
         payments.map((e) => e.toJson()).toList(),
       );
+
+  @override
+  Future<BusinessProfile> loadProfile() async {
+    final record = await _readRecord(_profileKey);
+    if (record == null) return BusinessProfile();
+    try {
+      return BusinessProfile.fromJson(record);
+    } catch (_) {
+      return BusinessProfile();
+    }
+  }
+
+  @override
+  Future<void> saveProfile(BusinessProfile profile) =>
+      _writeRecord(_profileKey, profile.toJson());
+
+  @override
+  Future<PrintSettings> loadPrintSettings() async {
+    final record = await _readRecord(_printSettingsKey);
+    if (record == null) return PrintSettings();
+    try {
+      return PrintSettings.fromJson(record);
+    } catch (_) {
+      return PrintSettings();
+    }
+  }
+
+  @override
+  Future<void> savePrintSettings(PrintSettings settings) =>
+      _writeRecord(_printSettingsKey, settings.toJson());
+
+  Future<Map<String, dynamic>?> _readRecord(String key) async {
+    final raw = await _prefs.read(key);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _writeRecord(String key, Map<String, dynamic> value) =>
+      _prefs.write(key, jsonEncode(value));
 
   Future<List<T>> _loadList<T>(
     String key,

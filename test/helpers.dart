@@ -4,7 +4,9 @@ import 'package:path/path.dart' as p;
 
 import 'package:pfa_pharmacy_invoice_tracker/data/app_database.dart';
 import 'package:pfa_pharmacy_invoice_tracker/data/receipt_storage.dart';
+import 'package:pfa_pharmacy_invoice_tracker/models/business_profile.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/payment.dart';
+import 'package:pfa_pharmacy_invoice_tracker/models/print_settings.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/product.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/supplier.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/supplier_invoice.dart';
@@ -15,15 +17,21 @@ class InMemoryLocalStore implements LocalStore {
     List<SupplierInvoice>? invoices,
     List<Product>? products,
     List<Payment>? payments,
+    BusinessProfile? profile,
+    PrintSettings? printSettings,
   })  : suppliers = suppliers ?? [],
         invoices = invoices ?? [],
         products = products ?? [],
-        payments = payments ?? [];
+        payments = payments ?? [],
+        profile = profile ?? BusinessProfile(),
+        printSettings = printSettings ?? PrintSettings();
 
   List<Supplier> suppliers;
   List<SupplierInvoice> invoices;
   List<Product> products;
   List<Payment> payments;
+  BusinessProfile profile;
+  PrintSettings printSettings;
 
   @override
   String? get loadWarning => null;
@@ -58,6 +66,22 @@ class InMemoryLocalStore implements LocalStore {
   @override
   Future<void> savePayments(List<Payment> items) async {
     payments = List.of(items);
+  }
+
+  @override
+  Future<BusinessProfile> loadProfile() async => profile;
+
+  @override
+  Future<void> saveProfile(BusinessProfile value) async {
+    profile = value;
+  }
+
+  @override
+  Future<PrintSettings> loadPrintSettings() async => printSettings;
+
+  @override
+  Future<void> savePrintSettings(PrintSettings value) async {
+    printSettings = value;
   }
 }
 
@@ -138,6 +162,7 @@ SupplierInvoice invoice({
   String? reference,
   String? description,
   String paymentMethod = 'Cash',
+  String notes = '',
   List<String> receipts = const [],
   List<InvoiceLine> lines = const [],
 }) {
@@ -155,6 +180,7 @@ SupplierInvoice invoice({
     reference: reference ?? '',
     description: description ?? '',
     paymentMethod: paymentMethod,
+    notes: notes,
     receipts: receipts,
     lines: lines,
   );
