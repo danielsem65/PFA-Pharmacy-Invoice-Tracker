@@ -14,6 +14,8 @@ class StatCard extends StatelessWidget {
     this.compact = false,
     this.width,
     this.delay = Duration.zero,
+    this.hint,
+    this.onTap,
   });
 
   final String label;
@@ -27,9 +29,18 @@ class StatCard extends StatelessWidget {
   final double? width;
   final Duration delay;
 
+  /// A quiet line under the figure explaining what it counts, for cards that
+  /// need to say more than the number.
+  final String? hint;
+
+  /// Makes the whole card answer the pointer. Null on the pages that only use
+  /// the card to read a figure.
+  final VoidCallback? onTap;
+
   static final List<Color> primary = <Color>[Aurora.teal, Aurora.indigo];
   static final List<Color> danger = <Color>[Aurora.rose, Aurora.amber];
   static final List<Color> neutral = <Color>[Aurora.sky, Aurora.violet];
+  static final List<Color> money = <Color>[Aurora.emerald, Aurora.teal];
 
   @override
   Widget build(BuildContext context) {
@@ -58,56 +69,77 @@ class StatCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(20),
+            hoverColor: lead.withValues(alpha: 0.06),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Container(
-                  width: 30,
-                  height: 30,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: gradient),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, size: 16, color: Colors.white),
-                ),
-                const SizedBox(width: 9),
-                Flexible(
-                  child: Text(
-                    label.toUpperCase(),
-                    style: texts.labelSmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w800,
-                      fontSize: compact ? 10 : 11,
-                      letterSpacing: 0.3,
+                Row(
+                  children: <Widget>[
+                    Container(
+                      width: 30,
+                      height: 30,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: gradient),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(icon, size: 16, color: Colors.white),
                     ),
-                    maxLines: 2,
+                    const SizedBox(width: 9),
+                    Flexible(
+                      child: Text(
+                        label.toUpperCase(),
+                        style: texts.labelSmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w800,
+                          fontSize: compact ? 10 : 11,
+                          letterSpacing: 0.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                FittedBox(
+                  alignment: Alignment.centerLeft,
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    value,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    style: texts.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.6,
+                      fontSize: compact ? 17 : 21,
+                      height: 1.05,
+                      color: scheme.onSurface,
+                    ),
                   ),
                 ),
+                if (hint != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      hint!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: texts.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
               ],
             ),
-            const SizedBox(height: 10),
-            FittedBox(
-              alignment: Alignment.centerLeft,
-              fit: BoxFit.scaleDown,
-              child: Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: texts.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.6,
-                  fontSize: compact ? 17 : 21,
-                  height: 1.05,
-                  color: scheme.onSurface,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

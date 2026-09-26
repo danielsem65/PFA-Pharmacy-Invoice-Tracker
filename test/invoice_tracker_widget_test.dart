@@ -4,16 +4,34 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pfa_pharmacy_invoice_tracker/app.dart';
 import 'package:pfa_pharmacy_invoice_tracker/data/app_database.dart';
+import 'package:pfa_pharmacy_invoice_tracker/features/overview/overview_screen.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/product.dart';
 import 'package:pfa_pharmacy_invoice_tracker/widgets/app_sidebar.dart';
 
 import 'helpers.dart';
 
 void main() {
+  // A tap has to land on the whole nav pill and the whole quick-add bar, not
+  // just on the word, so these aim at the icon end of each one. The finders
+  // are scoped to the sidebar because the pages repeat these same names.
+  Future<void> tapIconEnd(WidgetTester tester, String label) async {
+    final box = tester.getRect(
+      find.descendant(
+        of: find.byType(AppSidebar),
+        matching: find.text(label),
+      ),
+    );
+    await tester.tapAt(Offset(box.left - 26, box.center.dy));
+    await tester.pumpAndSettle();
+  }
+
+  // The app now opens on the Overview, so anything that wants the invoice list
+  // asks for it by name rather than assuming where it landed.
   Future<InMemoryLocalStore> pumpApp(
     WidgetTester tester,
-    InMemoryLocalStore store,
-  ) async {
+    InMemoryLocalStore store, {
+    bool landOnInvoices = true,
+  }) async {
     await tester.binding.setSurfaceSize(const Size(800, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
@@ -25,8 +43,65 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    if (landOnInvoices) await tapIconEnd(tester, 'Invoices');
     return store;
   }
+
+  group('Overview', () {
+    testWidgets('is the page the app opens on', (tester) async {
+      await pumpApp(
+        tester,
+        InMemoryLocalStore(
+          suppliers: [supplier('s1', 'Pharma Co')],
+          invoices: [
+            invoice(
+              id: 'i1',
+              supplierId: 's1',
+              invoiceNumber: 'INV-001',
+              amountPesewas: 10000,
+            ),
+          ],
+        ),
+        landOnInvoices: false,
+      );
+
+      expect(find.byType(OverviewScreen), findsOneWidget);
+      expect(find.text('OUTSTANDING'), findsOneWidget);
+      expect(find.text('OVERDUE'), findsOneWidget);
+      expect(find.text('PAID THIS MONTH'), findsOneWidget);
+    });
+
+    testWidgets('asks for an invoice and a supplier when the books are empty',
+        (tester) async {
+      await pumpApp(tester, InMemoryLocalStore(), landOnInvoices: false);
+
+      expect(find.text('Nothing to summarise yet'), findsOneWidget);
+      expect(find.text('Add invoice'), findsOneWidget);
+      expect(find.text('Add supplier'), findsOneWidget);
+    });
+
+    testWidgets('lists what is past its date', (tester) async {
+      await pumpApp(
+        tester,
+        InMemoryLocalStore(
+          suppliers: [supplier('s1', 'Pharma Co')],
+          invoices: [
+            invoice(
+              id: 'i1',
+              supplierId: 's1',
+              invoiceNumber: 'INV-001',
+              amountPesewas: 10000,
+              dueDate: DateTime(2000, 1, 31),
+            ),
+          ],
+        ),
+        landOnInvoices: false,
+      );
+
+      expect(find.text('Needs attention'), findsOneWidget);
+      expect(find.text('1 late'), findsOneWidget);
+    });
+  });
 
   group('InvoicesScreen', () {
     testWidgets('renders invoices with statuses and summary', (tester) async {
@@ -278,6 +353,92 @@ void main() {
       expect(store.invoices, isEmpty);
     });
 
+    // Payments are recorded on the Payments page, so the invoice form must not
+    // offer a second, competing way to type one.
+    testWidgets('the form does not ask what has been paid', (tester) async {
+      await pumpApp(
+        tester,
+        InMemoryLocalStore(suppliers: [supplier('s1', 'Pharma Co')]),
+      );
+
+      await tester.tap(find.text('New Invoice'));
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(TextFormField, 'Paid (GH₵)'), findsNothing);
+      expect(find.text('Paid Date'), findsNothing);
+      expect(find.text('Payment method'), findsNothing);
+    });
+
+    testWidgets('a new invoice starts owing everything', (tester) async {
+      final store = InMemoryLocalStore(
+        suppliers: [supplier('s1', 'Pharma Co')],
+      );
+      await pumpApp(tester, store);
+
+      await tester.tap(find.text('New Invoice'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Supplier'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Pharma Co');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Pharma Co').last);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Invoice No'),
+        'INV-030',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Amount (GH₵)'),
+        '90',
+      );
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(store.invoices.single.amountPaidPesewas, 0);
+      expect(store.invoices.single.paidDate, isNull);
+    });
+
+    // The dangerous failure here is silently zeroing a real payment because the
+    // field that used to hold it is gone.
+    testWidgets('editing an invoice keeps the payments it already has',
+        (tester) async {
+      final store = InMemoryLocalStore(
+        suppliers: [supplier('s1', 'Pharma Co')],
+        invoices: [
+          invoice(
+            id: 'i-paid',
+            invoiceNumber: 'INV-040',
+            amountPesewas: 20000,
+            amountPaidPesewas: 7500,
+            paidDate: DateTime(2026, 2, 2),
+            dueDate: DateTime(2026, 4, 1),
+          ),
+        ],
+      );
+      await pumpApp(tester, store);
+
+      await tester.tap(find.text('INV-040'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Edit'));
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(TextFormField, 'Paid (GH₵)'), findsNothing);
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Ref / PO No'),
+        'PO-77',
+      );
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      final saved = store.invoices.single;
+      expect(saved.reference, 'PO-77');
+      expect(saved.amountPaidPesewas, 7500);
+      expect(saved.paidDate, DateTime(2026, 2, 2));
+    });
+
     testWidgets('a product is looked up instead of typed', (tester) async {
       final store = InMemoryLocalStore(
         suppliers: [supplier('s1', 'Pharma Co')],
@@ -442,20 +603,6 @@ void main() {
   });
 
   group('AppSidebar', () {
-    // A tap has to land on the whole nav pill and the whole quick-add bar, not
-    // just on the word, so these aim at the icon end of each one. The finders
-    // are scoped to the sidebar because the pages repeat these same names.
-    Future<void> tapIconEnd(WidgetTester tester, String label) async {
-      final box = tester.getRect(
-        find.descendant(
-          of: find.byType(AppSidebar),
-          matching: find.text(label),
-        ),
-      );
-      await tester.tapAt(Offset(box.left - 26, box.center.dy));
-      await tester.pumpAndSettle();
-    }
-
     testWidgets('each nav item opens its page when tapped on the icon',
         (tester) async {
       await pumpApp(
@@ -474,6 +621,9 @@ void main() {
 
       await tapIconEnd(tester, 'Payments');
       expect(find.text('No payments yet'), findsOneWidget);
+
+      await tapIconEnd(tester, 'Overview');
+      expect(find.text('Nothing to summarise yet'), findsOneWidget);
     });
 
     // The invoice form covers the whole window, sidebar and all, so each end

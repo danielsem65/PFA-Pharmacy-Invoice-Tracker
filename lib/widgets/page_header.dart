@@ -171,6 +171,7 @@ class EmptyState extends StatelessWidget {
     required this.message,
     this.accentIndex = 0,
     this.action,
+    this.secondary,
   });
 
   final IconData icon;
@@ -178,6 +179,10 @@ class EmptyState extends StatelessWidget {
   final String message;
   final int accentIndex;
   final Widget? action;
+
+  /// A second, quieter way out of the same empty state, for pages that can be
+  /// begun two different ways.
+  final Widget? secondary;
 
   @override
   Widget build(BuildContext context) {
@@ -239,6 +244,10 @@ class EmptyState extends StatelessWidget {
               if (action != null) ...<Widget>[
                 const SizedBox(height: 20),
                 action!,
+              ],
+              if (secondary != null) ...<Widget>[
+                const SizedBox(height: 10),
+                secondary!,
               ],
             ],
           ),

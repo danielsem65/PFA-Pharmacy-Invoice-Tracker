@@ -7,6 +7,7 @@ import '../features/invoices/invoice_detail_screen.dart';
 import '../features/invoices/invoice_form_screen.dart';
 import '../features/invoices/invoices_screen.dart';
 import '../features/import/import_excel_screen.dart';
+import '../features/overview/overview_screen.dart';
 import '../features/payments/payment_form_screen.dart';
 import '../features/payments/payments_screen.dart';
 import '../features/products/product_form_screen.dart';
@@ -23,12 +24,20 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/',
+    initialLocation: '/overview',
     routes: [
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
         branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/overview',
+                builder: (context, state) => const OverviewScreen(),
+              ),
+            ],
+          ),
           StatefulShellBranch(
             routes: [
               GoRoute(
