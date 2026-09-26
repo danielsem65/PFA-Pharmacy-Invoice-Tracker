@@ -58,36 +58,39 @@ class PageHeader extends StatelessWidget {
             final mark = Padding(
               padding: const EdgeInsets.only(right: 16),
               child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                if (leading != null) ...<Widget>[
-                  leading!,
-                  const SizedBox(width: 14),
-                ],
-                if (icon != null) ...<Widget>[
-                  Container(
-                    width: 48,
-                    height: 48,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: <Color>[accent, Aurora.accent(accentIndex + 3)],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: <BoxShadow>[
-                        BoxShadow(
-                          color: accent.withValues(alpha: 0.45),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (leading != null) ...<Widget>[
+                    leading!,
+                    const SizedBox(width: 14),
+                  ],
+                  if (icon != null)
+                    Container(
+                      width: 48,
+                      height: 48,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: <Color>[
+                            accent,
+                            Aurora.accent(accentIndex + 3),
+                          ],
                         ),
-                      ],
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: <BoxShadow>[
+                          BoxShadow(
+                            color: accent.withValues(alpha: 0.45),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Icon(icon, color: Colors.white, size: 24),
                     ),
-                    child: Icon(icon, color: Colors.white, size: 24),
-                  ),
                 ],
-              ],
+              ),
             );
 
             final heading = Column(
