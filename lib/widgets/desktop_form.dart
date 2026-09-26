@@ -13,6 +13,34 @@ List<Widget> withGaps(List<Widget> items, double gap) {
 
 typedef FieldSpec = ({Widget child, int flex});
 
+/// Holds a form to a comfortable reading width and centres it in whatever space
+/// the window gives it, so a short form is not stretched edge to edge on a wide
+/// screen.
+///
+/// The [Align] is what makes this work: a scroll view hands its children a
+/// tight width, so a bare [ConstrainedBox] inside one is silently ignored.
+class ReadingWidth extends StatelessWidget {
+  const ReadingWidth({
+    super.key,
+    required this.child,
+    this.maxWidth = 720,
+  });
+
+  final Widget child;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: child,
+      ),
+    );
+  }
+}
+
 /// A row of form fields that keeps its column layout on a desktop window and
 /// collapses to a single stacked column when the available width is too small.
 class FieldRow extends StatelessWidget {

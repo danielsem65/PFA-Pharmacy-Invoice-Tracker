@@ -228,15 +228,17 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
     final invoices = _openInvoices;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Record payment')),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-              children: [
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1000),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                children: [
+                // A payment is a short, deliberate piece of work, so the form
+                // is held to a reading width in the middle of the window
+                // rather than stretched across it.
+                ReadingWidth(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -246,6 +248,12 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
                             'One payment can settle as many invoices as you tick',
                         icon: Icons.payments_outlined,
                         accentIndex: 4,
+                        leading: IconButton(
+                          key: const Key('payment-back'),
+                          tooltip: 'Back to payments',
+                          icon: const Icon(Icons.arrow_back),
+                          onPressed: () => context.go('/payments'),
+                        ),
                       ),
                       const SizedBox(height: 18),
                       FormSection(
@@ -446,10 +454,10 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 }
-
 class _InvoiceAllocationRow extends StatefulWidget {
   const _InvoiceAllocationRow({
     required this.invoice,
