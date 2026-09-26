@@ -107,6 +107,15 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// The invoice list sits below the fold on a short window, so each control is
+  /// brought into view before it is tapped.
+  Future<void> tapVisible(WidgetTester tester, Finder finder) async {
+    await tester.ensureVisible(finder);
+    await tester.pumpAndSettle();
+    await tester.tap(finder);
+    await tester.pumpAndSettle();
+  }
+
   group('PaymentsScreen', () {
     testWidgets('opens from the sidebar and lists what was paid',
         (tester) async {
@@ -178,13 +187,9 @@ void main() {
       await tester.enterText(find.byKey(const Key('payment-amount')), '150.00');
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('pay-invoice-i2')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('pay-invoice-i3')));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('split-evenly')));
-      await tester.pumpAndSettle();
+      await tapVisible(tester, find.byKey(const Key('pay-invoice-i2')));
+      await tapVisible(tester, find.byKey(const Key('pay-invoice-i3')));
+      await tapVisible(tester, find.byKey(const Key('split-evenly')));
 
       // 150.00 across two invoices: 100.00 to the 200.00 one, then the 50.00
       // one takes the rest, so nothing is left over.
@@ -242,8 +247,7 @@ void main() {
 
       await tester.enterText(find.byKey(const Key('payment-amount')), '500.00');
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('pay-invoice-i2')));
-      await tester.pumpAndSettle();
+      await tapVisible(tester, find.byKey(const Key('pay-invoice-i2')));
 
       await tester.tap(find.byKey(const Key('save-form')));
       await tester.pumpAndSettle();

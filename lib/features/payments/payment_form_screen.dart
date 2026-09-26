@@ -273,7 +273,7 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
                           ),
                           FieldRow(
                             fields: [
-                              FieldSpec(
+                              (
                                 flex: 2,
                                 child: TextField(
                                   key: const Key('payment-amount'),
@@ -287,7 +287,7 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
                                   ),
                                 ),
                               ),
-                              FieldSpec(
+                              (
                                 flex: 3,
                                 child: InkWell(
                                   key: const Key('payment-date'),
@@ -312,7 +312,7 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
                           ),
                           FieldRow(
                             fields: [
-                              FieldSpec(
+                              (
                                 flex: 2,
                                 child: DropdownButtonFormField<String>(
                                   initialValue: _method,
@@ -331,7 +331,7 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
                                       setState(() => _method = v ?? _method),
                                 ),
                               ),
-                              FieldSpec(
+                              (
                                 flex: 3,
                                 child: TextField(
                                   controller: _referenceCtrl,

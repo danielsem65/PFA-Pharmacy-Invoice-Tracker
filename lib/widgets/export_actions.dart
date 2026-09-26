@@ -133,15 +133,14 @@ Future<void> exportCsv(
 Future<void> exportPaymentsCsv(
   BuildContext context,
   WidgetRef ref, {
-  List<Payment>? paymentScope,
+  required List<Payment> payments,
 }) async {
-  final payments = paymentScope ?? ref.read(paymentsProvider);
   if (payments.isEmpty) {
     toast(context, 'There are no payments to export yet.');
     return;
   }
-  final invoices = ref.read(invoicesProvider);
-  final suppliers = ref.read(suppliersProvider);
+  final List<SupplierInvoice> invoices = ref.read(invoicesProvider);
+  final List<Supplier> suppliers = ref.read(suppliersProvider);
 
   SupplierInvoice? byId(String id) {
     for (final i in invoices) {

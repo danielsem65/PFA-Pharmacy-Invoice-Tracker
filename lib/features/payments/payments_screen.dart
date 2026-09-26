@@ -117,7 +117,11 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                 OutlinedButton.icon(
                   onPressed: payments.isEmpty
                       ? null
-                      : () => exportPaymentsCsv(context, ref),
+                      : () => exportPaymentsCsv(
+                            context,
+                            ref,
+                            payments: payments,
+                          ),
                   icon: const Icon(Icons.download_outlined, size: 18),
                   label: const Text('Export'),
                 ),
