@@ -177,11 +177,7 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
       builder: (context) => NewSupplierDialog(initialName: nameTrimmed),
     );
     if (created == null) return;
-    // ignore: avoid_print
-    print('DIAG afterDialog created=${created.name} mounted=$mounted');
     await ref.read(suppliersProvider.notifier).add(created);
-    // ignore: avoid_print
-    print('DIAG afterAdd mounted=$mounted');
     final s = ref
         .read(suppliersProvider)
         .where((x) => x.id == created.id)
@@ -1443,24 +1439,13 @@ class _NewSupplierDialogState extends State<NewSupplierDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: () {
-            // ignore: avoid_print
-            print(
-              'DIAG pop before isCurrent=${ModalRoute.of(context)?.isCurrent} '
-              'canPop=${Navigator.of(context).canPop()}',
-            );
-            Navigator.of(context).pop(
-              Supplier.create(
-                _name.text.trim(),
-                phone: _phone.text.trim(),
-                location: _location.text.trim(),
-              ),
-            );
-            // ignore: avoid_print
-            print(
-              'DIAG pop after isCurrent=${ModalRoute.of(context)?.isCurrent}',
-            );
-          },
+          onPressed: () => Navigator.of(context).pop(
+            Supplier.create(
+              _name.text.trim(),
+              phone: _phone.text.trim(),
+              location: _location.text.trim(),
+            ),
+          ),
           child: const Text('Create'),
         ),
 

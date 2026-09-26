@@ -7,7 +7,6 @@ import 'package:pfa_pharmacy_invoice_tracker/core/router.dart';
 import 'package:pfa_pharmacy_invoice_tracker/data/app_database.dart';
 import 'package:pfa_pharmacy_invoice_tracker/features/invoices/invoice_form_screen.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/supplier_invoice.dart';
-import 'package:pfa_pharmacy_invoice_tracker/features/invoices/invoices_screen.dart';
 import 'package:pfa_pharmacy_invoice_tracker/widgets/app_sidebar.dart';
 import 'package:pfa_pharmacy_invoice_tracker/widgets/desktop_form.dart';
 import 'package:pfa_pharmacy_invoice_tracker/widgets/stat_card.dart';
@@ -278,17 +277,19 @@ void main() {
       );
     }
 
-    String diag(WidgetTester tester) {
+    /// Where the router actually is, which is not the same question as which
+    /// widgets are on screen: a page can be mid-animation while the router has
+    /// already decided the user has left it.
+    String routerLocation(WidgetTester tester) {
       final container = ProviderScope.containerOf(
         tester.element(find.byType(App).first),
       );
-      final uri =
-          container.read(routerProvider).routerDelegate.currentConfiguration.uri;
-      return 'DIAG location=$uri '
-          'onstage=${form.evaluate().length} '
-          'anywhere=${find.byType(InvoiceFormScreen, skipOffstage: false).evaluate().length} '
-          'invoices=${find.byType(InvoicesScreen, skipOffstage: false).evaluate().length} '
-          'newInvoiceText=${find.text('New Invoice', skipOffstage: false).evaluate().length}';
+      return container
+          .read(routerProvider)
+          .routerDelegate
+          .currentConfiguration
+          .uri
+          .toString();
     }
 
 
@@ -316,9 +317,6 @@ void main() {
       );
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Create'));
-      await tester.pump();
-      // ignore: avoid_print
-      print('DIAG frame1 ${diag(tester)}');
       await tester.pumpAndSettle();
 
       // Only the dialog closes.
@@ -331,12 +329,15 @@ void main() {
         '024 555 0199',
       );
 
-      // ignore: avoid_print
-      print(diag(tester));
       // The form is still the one that was there before, holding what was typed.
       expect(form, findsOneWidget);
       expect(tester.state(form), same(before.state));
       expect(before.number.text, 'INV-900');
+
+      // And the router still thinks the user is on it. Popping the dialog used
+      // to take the form's own route with it, dropping the user back on the
+      // invoice list with everything they had typed gone.
+      expect(routerLocation(tester), '/new');
     });
 
     testWidgets('cancelling the dialog changes nothing at all', (tester) async {
@@ -355,8 +356,6 @@ void main() {
 
       expect(find.text('New supplier'), findsNothing);
       expect(store.suppliers.map((s) => s.name), isNot(contains('Emerald')));
-      // ignore: avoid_print
-      print(diag(tester));
       // The form is still the one that was there before, holding what was typed.
       expect(form, findsOneWidget);
       expect(tester.state(form), same(before.state));

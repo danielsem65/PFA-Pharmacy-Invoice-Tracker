@@ -386,13 +386,19 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
       ),
     ),
     snackBarTheme: SnackBarThemeData(
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: isDark ? scheme.inverseSurface : _ink,
-      contentTextStyle: baseTextTheme.bodyMedium?.copyWith(
-        color: Colors.white.withValues(alpha: 0.95),
+        behavior: SnackBarBehavior.floating,
+        // Dark in both themes, deliberately. inverseSurface is a *light* pane in
+        // a dark theme, so pairing it with white text - which is what this used
+        // to do - made the toast white on white and unreadable. A floating
+        // message is a label on top of the app, not part of it, so it stays ink
+        // in light and dark alike and the white text always has something to
+        // sit on.
+        backgroundColor: _ink,
+        contentTextStyle: baseTextTheme.bodyMedium?.copyWith(
+          color: Colors.white.withValues(alpha: 0.95),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-    ),
     dividerTheme: DividerThemeData(
       color: glass.rim,
       space: 1,
@@ -465,7 +471,8 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
       waitDuration: const Duration(milliseconds: 500),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: isDark ? scheme.inverseSurface : _ink,
+        // Ink, for the same reason as the toast above.
+        color: _ink,
         borderRadius: BorderRadius.circular(10),
       ),
       textStyle: baseTextTheme.bodySmall?.copyWith(

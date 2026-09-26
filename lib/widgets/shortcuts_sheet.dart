@@ -137,12 +137,15 @@ class ShortcutsSheet extends StatelessWidget {
                         children: <Widget>[
                           for (var i = 0; i < row.keys.length; i++) ...<Widget>[
                             if (i > 0)
-                              const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 3),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 3),
                                 child: Text(
                                   '+',
                                   style: TextStyle(
-                                    color: Colors.white24,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.24),
                                     fontSize: 10,
                                     fontWeight: FontWeight.w800,
                                   ),

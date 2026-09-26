@@ -119,8 +119,11 @@ class _AppWindowCaptionState extends State<AppWindowCaption>
                       'PFA Pharmacy',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white70,
+                      style: TextStyle(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.2,
@@ -147,7 +150,10 @@ class _AppWindowCaptionState extends State<AppWindowCaption>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.45),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.45),
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.4,
@@ -203,6 +209,7 @@ class _CaptionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Tooltip(
       message: tooltip,
       child: MouseRegion(
@@ -215,11 +222,11 @@ class _CaptionButton extends StatelessWidget {
             child: HoverTint(
               color: danger
                   ? const Color(0xFFE11D48)
-                  : Colors.white.withValues(alpha: 0.10),
+                  : scheme.onSurface.withValues(alpha: 0.10),
               child: Icon(
                 icon,
                 size: danger ? 16 : 15,
-                color: Colors.white.withValues(alpha: 0.75),
+                color: scheme.onSurface.withValues(alpha: 0.75),
               ),
             ),
           ),

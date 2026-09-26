@@ -76,6 +76,10 @@ class AppSidebar extends StatelessWidget {
       _items.length == itemCount,
       'The sidebar and the shell must list the same destinations, in order.',
     );
+    // The bar is glass over the page, so it is only as light or as dark as the
+    // theme says it is. Its ink has to come from the theme for the same reason:
+    // white lettering is unreadable the moment the sky behind it goes pale.
+    final scheme = Theme.of(context).colorScheme;
     return SizedBox(
       width: width,
       child: GlassBar(
@@ -105,9 +109,12 @@ class AppSidebar extends StatelessWidget {
                     child: _SectionLabel('WORKSPACE'),
                   )
                 else
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(0, 0, 0, 10),
-                    child: Divider(color: Color(0x22FFFFFF), height: 1),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 10),
+                    child: Divider(
+                      color: scheme.onSurface.withValues(alpha: 0.13),
+                      height: 1,
+                    ),
                   ),
                 for (var i = 0; i < _items.length; i++)
                   _SidebarItem(
@@ -207,11 +214,12 @@ class _Brand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       children: <Widget>[
         const _BrandMark(),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -219,7 +227,7 @@ class _Brand extends StatelessWidget {
               Text(
                 'Invoice Tracker',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: scheme.onSurface,
                   fontSize: 15.5,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.2,
@@ -255,8 +263,8 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(
-        color: Colors.white38,
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
         fontSize: 10.5,
         fontWeight: FontWeight.w800,
         letterSpacing: 1.4,
@@ -393,6 +401,7 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Expanded(
       child: Tooltip(
         message: label,
@@ -406,11 +415,17 @@ class _QuickAction extends StatelessWidget {
               height: 38,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: scheme.onSurface.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+                border: Border.all(
+                  color: scheme.onSurface.withValues(alpha: 0.07),
+                ),
               ),
-              child: Icon(icon, size: 18, color: Colors.white70),
+              child: Icon(
+                icon,
+                size: 18,
+                color: scheme.onSurface.withValues(alpha: 0.7),
+              ),
             ),
           ),
         ),
@@ -432,12 +447,13 @@ class _SidebarFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 11, 8, 11),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+        color: scheme.onSurface.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: scheme.onSurface.withValues(alpha: 0.08)),
       ),
       child: Row(
         children: <Widget>[
@@ -452,10 +468,10 @@ class _SidebarFooter extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                const Text(
+                Text(
                   'Offline',
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: scheme.onSurface.withValues(alpha: 0.7),
                     fontSize: 11.5,
                     fontWeight: FontWeight.w700,
                   ),
@@ -465,8 +481,8 @@ class _SidebarFooter extends StatelessWidget {
                 if (version.isNotEmpty)
                   Text(
                     'v$version',
-                    style: const TextStyle(
-                      color: Colors.white38,
+                    style: TextStyle(
+                      color: scheme.onSurface.withValues(alpha: 0.38),
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
                     ),
@@ -547,6 +563,7 @@ class _FooterIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final button = Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(9),
@@ -559,12 +576,14 @@ class _FooterIcon extends StatelessWidget {
           alignment: Alignment.center,
           decoration: boxed
               ? BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: scheme.onSurface.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(9),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  border: Border.all(
+                    color: scheme.onSurface.withValues(alpha: 0.08),
+                  ),
                 )
               : null,
-          child: Icon(icon, size: 15, color: Colors.white54),
+          child: Icon(icon, size: 15, color: scheme.onSurface.withValues(alpha: 0.54)),
         ),
       ),
     );
@@ -597,6 +616,8 @@ class _SidebarItemState extends State<_SidebarItem> {
     final selected = widget.selected;
     final accent = widget.data.accent;
     final collapsed = widget.collapsed;
+    final scheme = Theme.of(context).colorScheme;
+    final ink = scheme.onSurface;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: collapsed ? 8 : 12, vertical: 3),
@@ -609,8 +630,8 @@ class _SidebarItemState extends State<_SidebarItem> {
           curve: Curves.easeOut,
           decoration: BoxDecoration(
             color: selected
-                ? Colors.white.withValues(alpha: 0.13)
-                : Colors.white.withValues(alpha: _hovered ? 0.07 : 0),
+                ? ink.withValues(alpha: 0.13)
+                : ink.withValues(alpha: _hovered ? 0.07 : 0),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: selected
@@ -633,7 +654,7 @@ class _SidebarItemState extends State<_SidebarItem> {
             child: InkWell(
               onTap: widget.onTap,
               borderRadius: BorderRadius.circular(12),
-              hoverColor: Colors.white.withValues(alpha: 0.06),
+              hoverColor: ink.withValues(alpha: 0.06),
               child: collapsed
                   ? Tooltip(
                       message: widget.data.label,
@@ -647,7 +668,7 @@ class _SidebarItemState extends State<_SidebarItem> {
                             size: 20,
                             color: selected
                                 ? accent
-                                : Colors.white.withValues(alpha: 0.6),
+                                : ink.withValues(alpha: 0.6),
                           ),
                         ),
                       ),
@@ -691,8 +712,9 @@ class _SidebarItemState extends State<_SidebarItem> {
                               size: 20,
                               color: selected
                                   ? accent
-                                  : Colors.white
-                                      .withValues(alpha: _hovered ? 0.85 : 0.6),
+                                  : ink.withValues(
+                                      alpha: _hovered ? 0.85 : 0.6,
+                                    ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -701,8 +723,8 @@ class _SidebarItemState extends State<_SidebarItem> {
                               widget.data.label,
                               style: TextStyle(
                                 color: selected
-                                    ? Colors.white
-                                    : Colors.white.withValues(alpha: 0.72),
+                                    ? ink
+                                    : ink.withValues(alpha: 0.72),
                                 fontSize: 14,
                                 fontWeight:
                                     selected ? FontWeight.w800 : FontWeight.w600,
