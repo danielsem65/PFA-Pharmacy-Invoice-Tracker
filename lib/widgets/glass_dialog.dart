@@ -32,11 +32,11 @@ Future<T?> showGlassDialog<T>({
     barrierDismissible: barrierDismissible,
     barrierColor: barrierColor,
     barrierLabel: barrierLabel,
-    builder: (context) {
+    builder: (dialogContext) {
       return Theme(
         // Scoped to this dialog only, and read by both the Dialog below and the
         // AlertDialog the caller is about to return.
-        data: Theme.of(context).copyWith(
+        data: Theme.of(dialogContext).copyWith(
           dialogTheme: const DialogThemeData(
             backgroundColor: Colors.transparent,
             surfaceTintColor: Colors.transparent,
@@ -58,8 +58,9 @@ Future<T?> showGlassDialog<T>({
             // monitor. Height is left entirely to the content, as before.
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 720),
-              // Built under the pane, so the caller's context sees the same
-              // ancestors it would see under a Dialog.
+              // Built under the pane, so the caller's context sits below this
+              // dialog in the tree, and the navigator it finds is the one this
+              // dialog was pushed onto - the one whose top route is the dialog.
               child: Builder(builder: builder),
             ),
           ),

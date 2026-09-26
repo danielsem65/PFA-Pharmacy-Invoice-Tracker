@@ -105,6 +105,12 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
   final fieldColor = isDark
       ? Colors.black.withValues(alpha: 0.18)
       : Colors.white.withValues(alpha: 0.55);
+  // A menu is read over whatever happens to be behind it, and behind a menu on
+  // a page of glass can be a bright aurora curtain. Every other surface in the
+  // app can get away with being see-through because a card has a fixed place to
+  // sit; a floating menu does not, so it is deliberately solid. The rim still
+  // says glass - the middle just stops pretending.
+  final menuSurface = Color.alphaBlend(glass.tintUltra, scheme.surface);
 
   final baseTextTheme = ThemeData(
     colorScheme: scheme,
@@ -422,7 +428,7 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
     ),
     popupMenuTheme: PopupMenuThemeData(
       surfaceTintColor: Colors.transparent,
-      color: glass.tintUltra,
+      color: menuSurface,
       elevation: 10,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -431,7 +437,7 @@ ThemeData _compose(ColorScheme scheme, Brightness brightness) {
     ),
     menuTheme: MenuThemeData(
       style: MenuStyle(
-        backgroundColor: WidgetStatePropertyAll(glass.tintUltra),
+        backgroundColor: WidgetStatePropertyAll(menuSurface),
         elevation: const WidgetStatePropertyAll(10),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(

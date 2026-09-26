@@ -247,4 +247,80 @@ void main() {
       expect(find.byKey(const Key('save-form')), findsOneWidget);
     });
   });
+
+  group('Creating a supplier from the invoice form', () {
+    // The text field inside the supplier search, which is where the offer to
+    // create a missing supplier appears.
+    final Finder supplierSearch = find.descendant(
+      of: find.byType(SearchAnchor),
+      matching: find.byType(TextField),
+    );
+    final Finder invoiceNo = find.widgetWithText(TextFormField, 'Invoice No');
+
+    testWidgets('keeps the half-finished invoice on screen', (tester) async {
+      final store = InMemoryLocalStore(suppliers: [supplier('s1', 'Pharma Co')]);
+      await pumpApp(tester, store);
+      await openForm(tester);
+
+      // Something already typed on the form, which is the whole point: losing
+      // this is what made the flow unusable.
+      await tester.enterText(invoiceNo, 'INV-900');
+      await tester.pumpAndSettle();
+
+      // No supplier matches, so the search offers to make one.
+      await tester.enterText(supplierSearch, 'Emerald');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Create “Emerald”'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New supplier'), findsOneWidget);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Phone (optional)'),
+        '024 555 0199',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Create'));
+      await tester.pumpAndSettle();
+
+      // Only the dialog closes.
+      expect(find.text('New supplier'), findsNothing);
+
+      // The supplier was still created, and is now the one on the invoice.
+      expect(store.suppliers.map((s) => s.name), contains('Emerald'));
+      expect(
+        store.suppliers.firstWhere((s) => s.name == 'Emerald').phone,
+        '024 555 0199',
+      );
+
+      // And the form is still the form, with the work on it intact.
+      expect(find.text('New Invoice'), findsOneWidget);
+      expect(
+        tester.widget<TextFormField>(invoiceNo).controller!.text,
+        'INV-900',
+      );
+    });
+
+    testWidgets('cancelling the dialog changes nothing at all', (tester) async {
+      final store = InMemoryLocalStore(suppliers: [supplier('s1', 'Pharma Co')]);
+      await pumpApp(tester, store);
+      await openForm(tester);
+      await tester.enterText(invoiceNo, 'INV-900');
+      await tester.pumpAndSettle();
+
+      await tester.enterText(supplierSearch, 'Emerald');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Create “Emerald”'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New supplier'), findsNothing);
+      expect(store.suppliers.map((s) => s.name), isNot(contains('Emerald')));
+      expect(find.text('New Invoice'), findsOneWidget);
+      expect(
+        tester.widget<TextFormField>(invoiceNo).controller!.text,
+        'INV-900',
+      );
+    });
+  });
 }
