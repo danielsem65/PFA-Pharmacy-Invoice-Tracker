@@ -55,7 +55,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
   late final TextEditingController _description;
   late final TextEditingController _amount;
   late final TextEditingController _taxRate;
-  late final TextEditingController _paid;
   late final TextEditingController _notes;
 
   SupplierInvoice? _existing;
@@ -63,8 +62,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
   DateTime _invoiceDate = dateOnly(DateTime.now());
   DateTime _receivedDate = dateOnly(DateTime.now());
   DateTime _dueDate = dateOnly(DateTime.now().add(const Duration(days: 30)));
-  DateTime _paidDate = dateOnly(DateTime.now());
-  String _paymentMethod = 'Cash';
   final List<String> _receipts = [];
   final List<_LineDraft> _lineDrafts = [];
 
@@ -89,7 +86,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
     _description = TextEditingController();
     _amount = TextEditingController();
     _taxRate = TextEditingController();
-    _paid = TextEditingController();
     _notes = TextEditingController();
 
     if (_isEditing) {
@@ -106,8 +102,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
         _invoiceDate = e.invoiceDate;
         _receivedDate = e.receivedDate;
         _dueDate = e.dueDate;
-        _paymentMethod = e.paymentMethod;
-        if (e.paidDate != null) _paidDate = e.paidDate!;
         _receipts.addAll(e.receipts);
         _invoiceNo.text = e.invoiceNumber;
         _reference.text = e.reference;
@@ -117,7 +111,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
         _taxRate.text = e.taxRatePercent == e.taxRatePercent.roundToDouble()
             ? e.taxRatePercent.round().toString()
             : e.taxRatePercent.toString();
-        _paid.text = (e.amountPaidPesewas / 100).toStringAsFixed(2);
         if (e.lines.isNotEmpty) {
           _lineDrafts.addAll(e.lines.map((l) => _LineDraft(l)));
           _amount.text = (e.lineItemsTotalPesewas / 100).toStringAsFixed(2);
@@ -133,7 +126,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
     _description.dispose();
     _amount.dispose();
     _taxRate.dispose();
-    _paid.dispose();
     _notes.dispose();
     _searchController.dispose();
     for (final d in _lineDrafts) {
@@ -313,7 +305,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
         ..showSnackBar(const SnackBar(content: Text('Select a supplier first.')));
       return;
     }
-    final paidAmount = _parseMoney(_paid.text) ?? 0;
     final amount = _hasLines ? _computedSubtotal : (_parseMoney(_amount.text) ?? 0);
     final tax = _parsePercent(_taxRate.text);
 
@@ -354,6 +345,10 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
       invoiceLines = lines;
     }
 
+    // What has been paid is not typed here. It is recorded against the invoice
+    // from the Payments page, so a new invoice starts at nothing owed and an
+    // edited one keeps every payment it has already been given - the amounts
+    // below are simply left out of the copy, which is what preserves them.
     final invoice = _existing == null
         ? SupplierInvoice.create(
             supplierId: _supplierId!,
@@ -363,11 +358,8 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
             dueDate: _dueDate,
             amountPesewas: amount,
             taxRatePercent: tax ?? 0,
-            amountPaidPesewas: paidAmount,
             reference: _reference.text.trim(),
             description: _description.text.trim(),
-            paidDate: paidAmount > 0 ? _paidDate : null,
-            paymentMethod: _paymentMethod,
             notes: _notes.text.trim(),
             receipts: List.of(_receipts),
             lines: invoiceLines,
@@ -380,12 +372,8 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
             dueDate: _dueDate,
             amountPesewas: amount,
             taxRatePercent: tax ?? 0,
-            amountPaidPesewas: paidAmount,
-            paidDate: paidAmount > 0 ? _paidDate : null,
-            clearPaidDate: paidAmount <= 0,
             reference: _reference.text.trim(),
             description: _description.text.trim(),
-            paymentMethod: _paymentMethod,
             notes: _notes.text.trim(),
             receipts: List.of(_receipts),
             lines: invoiceLines,
@@ -448,7 +436,7 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
 
   int get _liveTotal => _liveSubtotal + _liveTax;
 
-  int get _livePaid => _parseMoney(_paid.text) ?? 0;
+  int get _livePaid => _existing?.amountPaidPesewas ?? 0;
 
   int _lineTotal(_LineDraft d) {
     final boxes = int.tryParse(d.boxes.text.trim()) ?? 0;
@@ -459,7 +447,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
   @override
   Widget build(BuildContext context) {
     final suppliers = ref.watch(suppliersProvider);
-    final hasPaid = _livePaid > 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -483,8 +470,8 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
                         _itemsSection(),
                       ];
                       final side = <Widget>[
-                        _datesSection(hasPaid),
-                        _amountsSection(hasPaid),
+                        _datesSection(),
+                        _amountsSection(),
                         _totalsPanel(),
                         _notesSection(),
                       ];
@@ -969,7 +956,7 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
     );
   }
 
-  Widget _datesSection(bool hasPaid) {
+  Widget _datesSection() {
     return FormSection(
       title: 'Dates',
       icon: Icons.event_outlined,
@@ -1004,22 +991,13 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
                 onPicked: (d) => setState(() => _dueDate = d),
               ),
             ),
-            if (hasPaid)
-              (
-                flex: 1,
-                child: _dateField(
-                  label: 'Paid Date',
-                  value: _paidDate,
-                  onPicked: (d) => setState(() => _paidDate = d),
-                ),
-              ),
           ],
         ),
       ],
     );
   }
 
-  Widget _amountsSection(bool hasPaid) {
+  Widget _amountsSection() {
     return FormSection(
       title: 'Amounts',
       icon: Icons.payments_outlined,
@@ -1061,29 +1039,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
                 onChanged: (_) => setState(() {}),
               ),
             ),
-          ],
-        ),
-        FieldRow(
-          fields: [
-            (
-              flex: 3,
-              child: TextFormField(
-                controller: _paid,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Paid (GH₵)',
-                  prefixText: '₵ ',
-                ),
-                validator: (v) {
-                  final p = _parseMoney(v ?? '');
-                  if (p == null) return 'Enter a valid amount';
-                  return null;
-                },
-                onChanged: (_) => setState(() {}),
-              ),
-            ),
-            (flex: 2, child: _paymentField(hasPaid)),
           ],
         ),
       ],
@@ -1159,7 +1114,17 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
           row('VAT (${_trimRate(rate)}%)', formatPesewas(tax)),
           Divider(color: scheme.outlineVariant.withValues(alpha: 0.7)),
           row('Total', formatPesewas(total), strong: true, color: scheme.primary),
-          row('Paid', formatPesewas(paid)),
+          row('Paid to date', formatPesewas(paid)),
+          if (paid > 0)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                'Recorded from the Payments page, not typed here.',
+                style: texts.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
           row(
             balance <= 0 ? 'Balance settled' : 'Balance due',
             formatPesewas(balance),
@@ -1240,22 +1205,6 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _paymentField(bool hasPaid) {
-    return DropdownButtonFormField<String>(
-      initialValue: _paymentMethod,
-      decoration: const InputDecoration(labelText: 'Payment method'),
-      items: [
-        for (final m in kPaymentMethods)
-          DropdownMenuItem(value: m, child: Text(m)),
-      ],
-      onChanged: hasPaid
-          ? (v) {
-              if (v != null) setState(() => _paymentMethod = v);
-            }
-          : null,
     );
   }
 
