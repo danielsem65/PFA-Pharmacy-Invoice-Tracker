@@ -249,14 +249,17 @@ void main() {
   });
 
   group('Creating a supplier from the invoice form', () {
-    // The text input inside the supplier search bar. The bar is built as an
-    // EditableText rather than a TextField, and focusing it is what opens the
-    // list of suggestions.
-    final Finder supplierSearch = find.descendant(
-      of: find.byType(SearchAnchor),
-      matching: find.byType(EditableText),
-    );
     final Finder invoiceNo = find.widgetWithText(TextFormField, 'Invoice No');
+
+    // The search bar holds its text in an input of its own rather than a
+    // TextField of the form's, so it is opened and typed into the way the rest
+    // of the suite does it.
+    Future<void> searchFor(WidgetTester tester, String query) async {
+      await tester.tap(find.text('Supplier'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, query);
+      await tester.pumpAndSettle();
+    }
 
     testWidgets('keeps the half-finished invoice on screen', (tester) async {
       final store = InMemoryLocalStore(suppliers: [supplier('s1', 'Pharma Co')]);
@@ -269,8 +272,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // No supplier matches, so the search offers to make one.
-      await tester.enterText(supplierSearch, 'Emerald');
-      await tester.pumpAndSettle();
+      await searchFor(tester, 'Emerald');
       expect(find.text('Create “Emerald”'), findsOneWidget);
       await tester.tap(find.text('Create “Emerald”'));
       await tester.pumpAndSettle();
@@ -309,8 +311,7 @@ void main() {
       await tester.enterText(invoiceNo, 'INV-900');
       await tester.pumpAndSettle();
 
-      await tester.enterText(supplierSearch, 'Emerald');
-      await tester.pumpAndSettle();
+      await searchFor(tester, 'Emerald');
       await tester.tap(find.text('Create “Emerald”'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
