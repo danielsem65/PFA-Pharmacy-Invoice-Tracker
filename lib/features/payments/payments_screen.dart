@@ -138,99 +138,120 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
             padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
             child: FadeSlideIn(
               delay: const Duration(milliseconds: 60),
-              child: Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  SizedBox(
-                    width: 250,
-                    child: TextField(
-                      decoration: const InputDecoration(
-                        hintText: 'Search payments…',
-                        prefixIcon: Icon(Icons.search),
-                        isDense: true,
-                      ),
-                      onChanged: (v) => setState(() => _query = v),
-                    ),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  color: scheme.surface.withValues(alpha: 0.55),
+                  border: Border.all(
+                    color: scheme.outlineVariant.withValues(alpha: 0.5),
                   ),
-                  SizedBox(
-                    width: 240,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: scheme.outlineVariant.withValues(alpha: 0.7),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: TextField(
+                        decoration: const InputDecoration(
+                          hintText: 'Search payments…',
+                          prefixIcon: Icon(Icons.search),
+                          isDense: true,
                         ),
-                        borderRadius: BorderRadius.circular(14),
+                        onChanged: (v) => setState(() => _query = v),
                       ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          key: const Key('payments-supplier-filter'),
-                          isExpanded: true,
-                          value: _supplierFilter,
-                          hint: const Text('All suppliers'),
-                          borderRadius: BorderRadius.circular(14),
-                          items: [
-                            const DropdownMenuItem<String>(
-                              value: 'all',
-                              child: Text('All suppliers'),
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      flex: 1,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color:
+                                  scheme.outlineVariant.withValues(alpha: 0.7),
                             ),
-                            for (final s in suppliers)
-                              DropdownMenuItem<String>(
-                                value: s.id,
-                                child: Text(
-                                  s.name,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: DropdownButton<String>(
+                            key: const Key('payments-supplier-filter'),
+                            value: _supplierFilter,
+                            hint: const Text('All suppliers'),
+                            underline: const SizedBox.shrink(),
+                            borderRadius: BorderRadius.circular(14),
+                            items: [
+                              const DropdownMenuItem<String>(
+                                value: 'all',
+                                child: Text('All suppliers'),
                               ),
-                          ],
-                          onChanged: (v) =>
-                              setState(() => _supplierFilter = v ?? 'all'),
+                              for (final s in suppliers)
+                                DropdownMenuItem<String>(
+                                  value: s.id,
+                                  child: Text(s.name),
+                                ),
+                            ],
+                            onChanged: (v) => setState(
+                              () => _supplierFilter = v ?? 'all',
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 0),
-            child: FadeSlideIn(
-              delay: const Duration(milliseconds: 120),
-              child: Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  StatCard(
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: StatCard(
                     label: 'Total paid',
                     value: formatPesewas(paidTotal),
                     icon: Icons.savings_outlined,
                     gradient: const <Color>[Aurora.emerald, Aurora.teal],
+                    delay: const Duration(milliseconds: 120),
                   ),
-                  StatCard(
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: StatCard(
                     label: 'Still owed',
                     value: formatPesewas(outstandingTotal),
                     icon: Icons.account_balance_wallet_outlined,
                     gradient: const <Color>[Aurora.indigo, Aurora.sky],
+                    delay: const Duration(milliseconds: 190),
                   ),
-                  StatCard(
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: StatCard(
                     label: 'Overdue',
                     value: formatPesewas(overdueTotal),
                     icon: Icons.warning_amber_rounded,
                     gradient: const <Color>[Aurora.rose, Aurora.amber],
+                    delay: const Duration(milliseconds: 260),
                   ),
-                  StatCard(
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: StatCard(
                     label: 'Paid this month',
                     value: formatPesewas(thisMonth),
                     icon: Icons.event_available_outlined,
                     gradient: const <Color>[Aurora.violet, Aurora.pink],
+                    delay: const Duration(milliseconds: 330),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           Expanded(
             child: visible.isEmpty
                 ? _EmptyPayments(hasAny: payments.isNotEmpty)
