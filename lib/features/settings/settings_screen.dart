@@ -285,17 +285,23 @@ class _LayoutChoice extends StatelessWidget {
     return Column(
       children: <Widget>[
         _option(
+          context,
           'Ask each time',
           'Open the layout picker when you print. Nothing is remembered.',
           null,
         ),
         for (final layout in InvoicePrintLayout.values)
-          _option(layout.label, layout.blurb, layout),
+          _option(context, layout.label, layout.blurb, layout),
       ],
     );
   }
 
-  Widget _option(String label, String blurb, InvoicePrintLayout? value) {
+  Widget _option(
+    BuildContext context,
+    String label,
+    String blurb,
+    InvoicePrintLayout? value,
+  ) {
     final scheme = Theme.of(context).colorScheme;
     final texts = Theme.of(context).textTheme;
     final selected = settings.defaultLayout == value;
