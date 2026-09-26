@@ -480,7 +480,7 @@ class SoftCardBorder extends OutlinedBorder {
   const SoftCardBorder({
     this.radius = 20,
     this.fill = const Color(0xFFFFFFFF),
-    super.side = const BorderSide.none,
+    super.side = BorderSide.none,
     this.shadowColor = const Color(0xFF0B1020),
     this.shadowBlur = 22,
     this.shadowSpread = -6,
