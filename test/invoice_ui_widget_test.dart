@@ -313,7 +313,8 @@ void main() {
       );
 
       // The form was never torn down, and still holds what was typed on it.
-      expect(find.text('New Invoice'), findsOneWidget);
+      // The form is still the one that was there before, holding what was typed.
+      expect(form, findsOneWidget);
       expect(tester.state(form), same(before.state));
       expect(before.number.text, 'INV-900');
     });
@@ -334,7 +335,8 @@ void main() {
 
       expect(find.text('New supplier'), findsNothing);
       expect(store.suppliers.map((s) => s.name), isNot(contains('Emerald')));
-      expect(find.text('New Invoice'), findsOneWidget);
+      // The form is still the one that was there before, holding what was typed.
+      expect(form, findsOneWidget);
       expect(tester.state(form), same(before.state));
       expect(before.number.text, 'INV-900');
     });

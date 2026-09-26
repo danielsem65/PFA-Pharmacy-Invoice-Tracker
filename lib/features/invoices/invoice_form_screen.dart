@@ -156,16 +156,24 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
     _searchController.closeView(s.name);
   }
 
+  /// Opens the dialog that asks for the details of a supplier who is not in the
+  /// app yet, and puts them on this invoice.
+  ///
+  /// The dialog closes itself and hands the new supplier back, rather than
+  /// writing it and then closing. Two reasons: the dialog shuts the instant
+  /// Create is pressed instead of sitting there while the write happens, and
+  /// the pop happens in the same frame as the tap, so it can only ever close
+  /// the dialog. Awaiting a write first left the dialog's own route able to be
+  /// gone by the time it popped, and the pop then took the invoice form with
+  /// it - losing everything typed on the form.
   Future<void> _createSupplier(String name) async {
     final nameTrimmed = name.trim();
     if (nameTrimmed.isEmpty) return;
-    final controller = ref.read(suppliersProvider.notifier);
+    final nameCtrl = TextEditingController(text: nameTrimmed);
     final phoneCtrl = TextEditingController();
     final locationCtrl = TextEditingController();
-    // Left null when the dialog is cancelled, which is not an error: nothing
-    // was created, so there is nothing to select.
-    String? createdId;
-    await showGlassDialog<void>(
+
+    final created = await showGlassDialog<Supplier>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('New supplier'),
@@ -173,7 +181,7 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-              controller: TextEditingController(text: nameTrimmed),
+              controller: nameCtrl,
               decoration: const InputDecoration(labelText: 'Supplier name'),
             ),
             TextField(
@@ -192,25 +200,29 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () async {
-              final created = Supplier.create(
-                nameTrimmed,
+            onPressed: () => Navigator.of(context).pop(
+              Supplier.create(
+                nameCtrl.text.trim(),
                 phone: phoneCtrl.text.trim(),
                 location: locationCtrl.text.trim(),
-              );
-              createdId = created.id;
-              await controller.add(created);
-              if (context.mounted) Navigator.of(context).pop();
-            },
+              ),
+            ),
             child: const Text('Create'),
           ),
         ],
       ),
     );
-    if (createdId == null) return;
+
+    nameCtrl.dispose();
+    phoneCtrl.dispose();
+    locationCtrl.dispose();
+
+    // Cancelled: nothing was created, so there is nothing to select.
+    if (created == null) return;
+    await ref.read(suppliersProvider.notifier).add(created);
     final s = ref
         .read(suppliersProvider)
-        .where((x) => x.id == createdId)
+        .where((x) => x.id == created.id)
         .firstOrNull;
     if (s != null && mounted) _selectSupplier(s);
   }
