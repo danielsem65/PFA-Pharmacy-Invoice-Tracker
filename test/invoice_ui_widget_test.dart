@@ -261,6 +261,20 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // The form is a scrolling list, so the row typed into earlier can be out of
+    // the tree entirely once the search has been used. It is brought back before
+    // being read, which is also the proof that the form kept its state rather
+    // than being built again from nothing.
+    Future<String> invoiceNumberTyped(WidgetTester tester) async {
+      await tester.scrollUntilVisible(
+        invoiceNo,
+        -200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      return tester.widget<TextFormField>(invoiceNo).controller!.text;
+    }
+
     testWidgets('keeps the half-finished invoice on screen', (tester) async {
       final store = InMemoryLocalStore(suppliers: [supplier('s1', 'Pharma Co')]);
       await pumpApp(tester, store);
@@ -296,17 +310,10 @@ void main() {
         '024 555 0199',
       );
 
-      // And the form is still the form, with the work on it intact. The
-      // invoice number is looked for by what it holds rather than by the label
-      // above it, so the check is about the work surviving and nothing else.
+      // And the form is still the form, with the work on it intact.
       expect(find.text('New Invoice'), findsOneWidget);
-      expect(
-        tester
-            .widgetList<EditableText>(find.byType(EditableText))
-            .any((field) => field.controller.text == 'INV-900'),
-        isTrue,
-        reason: 'the invoice number typed before creating the supplier is gone',
-      );
+      expect(find.text('Emerald'), findsOneWidget);
+      expect(await invoiceNumberTyped(tester), 'INV-900');
     });
 
     testWidgets('cancelling the dialog changes nothing at all', (tester) async {
@@ -325,13 +332,7 @@ void main() {
       expect(find.text('New supplier'), findsNothing);
       expect(store.suppliers.map((s) => s.name), isNot(contains('Emerald')));
       expect(find.text('New Invoice'), findsOneWidget);
-      expect(
-        tester
-            .widgetList<EditableText>(find.byType(EditableText))
-            .any((field) => field.controller.text == 'INV-900'),
-        isTrue,
-        reason: 'the invoice number typed before opening the dialog is gone',
-      );
+      expect(await invoiceNumberTyped(tester), 'INV-900');
     });
   });
 }
