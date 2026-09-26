@@ -103,6 +103,9 @@ void main() {
         '030 123 4567',
       );
       await tester.ensureVisible(find.text('Save details').last);
+      // ensureVisible scrolls on an animation, so it needs a frame before the
+      // position it settled on can be tapped.
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Save details').last);
       await tester.pumpAndSettle();
 

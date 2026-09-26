@@ -249,11 +249,12 @@ void main() {
   });
 
   group('Creating a supplier from the invoice form', () {
-    // The text field inside the supplier search, which is where the offer to
-    // create a missing supplier appears.
+    // The text input inside the supplier search bar. The bar is built as an
+    // EditableText rather than a TextField, and focusing it is what opens the
+    // list of suggestions.
     final Finder supplierSearch = find.descendant(
       of: find.byType(SearchAnchor),
-      matching: find.byType(TextField),
+      matching: find.byType(EditableText),
     );
     final Finder invoiceNo = find.widgetWithText(TextFormField, 'Invoice No');
 
@@ -270,6 +271,7 @@ void main() {
       // No supplier matches, so the search offers to make one.
       await tester.enterText(supplierSearch, 'Emerald');
       await tester.pumpAndSettle();
+      expect(find.text('Create “Emerald”'), findsOneWidget);
       await tester.tap(find.text('Create “Emerald”'));
       await tester.pumpAndSettle();
 
