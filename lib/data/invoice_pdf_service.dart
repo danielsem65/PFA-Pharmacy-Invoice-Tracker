@@ -89,7 +89,7 @@ class PrintFonts {
   pw.TextStyle text(
     double size, {
     bool bold = false,
-    PdfColor color = _ink,
+    PdfColor color = _body,
     double spacing = 0,
   }) {
     return pw.TextStyle(
@@ -109,12 +109,16 @@ class PrintFonts {
   }
 }
 
-// The monochrome palette. Nothing here is colourful, on purpose.
+// The monochrome palette. Nothing here is colourful, on purpose. Body text is a
+// dark grey rather than pure black so the page photocopies and scans lighter;
+// only the handful of things that must catch the eye — headings, the grand
+// total — stay true black.
 const PdfColor _ink = PdfColors.black;
+const PdfColor _body = PdfColors.grey800;
 const PdfColor _muted = PdfColors.grey600;
-const PdfColor _rule = PdfColors.grey600;
-const PdfColor _hairline = PdfColors.grey400;
-const PdfColor _wash = PdfColors.grey200;
+const PdfColor _rule = PdfColors.grey500;
+const PdfColor _hairline = PdfColors.grey300;
+const PdfColor _wash = PdfColors.grey100;
 const PdfColor _paper = PdfColors.white;
 
 const PdfPageFormat _a4 = PdfPageFormat.a4;
@@ -128,7 +132,14 @@ pw.Widget _label(String text, PrintFonts f, {PdfColor color = _muted}) {
   );
 }
 
-pw.Widget _value(String text, PrintFonts f, {double size = 10, bool bold = true}) {
+/// Detail values are regular weight. Only headings and totals are bold, which
+/// is what stops a page of fields reading as a wall of ink.
+pw.Widget _value(
+  String text,
+  PrintFonts f, {
+  double size = 10,
+  bool bold = false,
+}) {
   return pw.Text(text, style: f.text(size, bold: bold));
 }
 
@@ -170,7 +181,7 @@ pw.Widget _hairlineRule({double thickness = 0.5, PdfColor color = _hairline}) {
 }
 
 pw.Widget _thickRule() {
-  return pw.Divider(height: 1.2, thickness: 1.2, color: _rule);
+  return pw.Divider(height: 0.9, thickness: 0.9, color: _rule);
 }
 
 /// Evenly spaced label/value pairs laid out in [columns] columns per row. A
@@ -245,7 +256,7 @@ pw.Widget _amountInWords(InvoicePrintSheet sheet, PrintFonts f) {
         pw.SizedBox(height: 3),
         pw.Text(
           sheet.totals.amountInWords,
-          style: f.text(9.5, bold: false, color: _ink),
+          style: f.text(9.5, bold: false, color: _body),
         ),
       ],
     ),
@@ -253,28 +264,32 @@ pw.Widget _amountInWords(InvoicePrintSheet sheet, PrintFonts f) {
   );
 }
 
-/// One row of the money block. [rule] draws the line above the total, [heavy]
-/// marks the total itself.
+/// One row of the money block. [rule] draws the line above the row, [heavy]
+/// marks the total itself: only those two are bold, and only a total gets a
+/// black line, so the eye lands on the figure that matters.
 pw.Widget _moneyRow(
   String label,
   String amount,
   PrintFonts f, {
   bool rule = false,
   bool heavy = false,
-  PdfColor color = _ink,
+  PdfColor color = _body,
 }) {
-  final style = f.text(heavy ? 12 : 10, bold: true, color: color);
+  final style = f.text(
+    heavy ? 12 : 9.5,
+    bold: heavy,
+    color: heavy ? _ink : color,
+  );
   return pw.Container(
     width: double.infinity,
     padding: pw.EdgeInsets.symmetric(vertical: heavy ? 6 : 3.5),
-    decoration: pw.BoxDecoration(
-      border: pw.Border(
-        top: pw.BorderSide(
-          color: heavy ? _ink : _hairline,
-          width: heavy ? 1.1 : 0.5,
-        ),
-      ),
-    ),
+    decoration: rule || heavy
+        ? pw.BoxDecoration(
+            border: pw.Border(
+              top: pw.BorderSide(color: heavy ? _ink : _rule, width: 0.8),
+            ),
+          )
+        : null,
     child: pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: <pw.Widget>[
@@ -310,7 +325,7 @@ pw.Widget _signaturePair(PrintFonts f) {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: <pw.Widget>[
           pw.SizedBox(height: 22),
-          pw.Container(height: 0.7, color: _ink),
+          pw.Container(height: 0.6, color: _rule),
           pw.SizedBox(height: 3),
           pw.Text(role, style: f.text(8, color: _muted)),
         ],
@@ -504,7 +519,7 @@ pw.Widget _itemsHeaderRow(PrintFonts f) {
 
   return pw.Container(
     decoration: const pw.BoxDecoration(
-      border: pw.Border(bottom: pw.BorderSide(color: _ink, width: 0.9)),
+      border: pw.Border(bottom: pw.BorderSide(color: _rule, width: 0.7)),
     ),
     child: pw.Row(
       children: <pw.Widget>[
@@ -557,12 +572,7 @@ pw.Widget _classicItems(InvoicePrintSheet sheet, PrintFonts f) {
             _itemCell('${sheet.lines[i].boxes}', f, right: true),
             _itemCell('${sheet.lines[i].piecesPerBox}', f, right: true),
             _itemCell(f.money(sheet.lines[i].pricePerBox), f, right: true),
-            _itemCell(
-              f.money(sheet.lines[i].lineTotal),
-              f,
-              right: true,
-              bold: true,
-            ),
+            _itemCell(f.money(sheet.lines[i].lineTotal), f, right: true),
           ],
         ),
     ],
@@ -573,7 +583,6 @@ pw.Widget _itemCell(
   String text,
   PrintFonts f, {
   bool right = false,
-  bool bold = false,
   bool muted = false,
 }) {
   return pw.Container(
@@ -584,11 +593,7 @@ pw.Widget _itemCell(
     child: pw.Text(
       text,
       textAlign: right ? pw.TextAlign.right : pw.TextAlign.left,
-      style: f.text(
-        9,
-        bold: bold,
-        color: muted ? _muted : _ink,
-      ),
+      style: f.text(9, color: muted ? _muted : _body),
     ),
   );
 }
@@ -822,7 +827,7 @@ pw.Widget _splitItemsHeader(PrintFonts f) {
 
   return pw.Container(
     decoration: const pw.BoxDecoration(
-      border: pw.Border(bottom: pw.BorderSide(color: _ink, width: 0.9)),
+      border: pw.Border(bottom: pw.BorderSide(color: _rule, width: 0.7)),
     ),
     child: pw.Row(
       children: <pw.Widget>[
@@ -893,7 +898,7 @@ pw.Widget _splitItems(
                 child: pw.Text(
                   f.money(line.lineTotal),
                   textAlign: pw.TextAlign.right,
-                  style: f.text(8.8, bold: true),
+                  style: f.text(8.8),
                 ),
               ),
             ],
@@ -934,7 +939,7 @@ pw.Page _paymentVoucherPage(InvoicePrintSheet sheet, PrintFonts f) {
           width: double.infinity,
           padding: const pw.EdgeInsets.symmetric(vertical: 12, horizontal: 14),
           decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: _ink, width: 1.2),
+            border: pw.Border.all(color: _rule, width: 0.8),
           ),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.center,
@@ -1027,7 +1032,7 @@ pw.Widget _voucherFigure(InvoicePrintSheet sheet, PrintFonts f) {
     padding: const pw.EdgeInsets.symmetric(vertical: 14, horizontal: 14),
     decoration: pw.BoxDecoration(
       color: _wash,
-      border: pw.Border.all(color: _ink, width: 1.2),
+      border: pw.Border.all(color: _rule, width: 0.8),
     ),
     child: pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1082,7 +1087,7 @@ pw.Widget _voucherItems(
     children: <pw.TableRow>[
       pw.TableRow(
         decoration: const pw.BoxDecoration(
-          border: pw.Border(bottom: pw.BorderSide(color: _ink, width: 0.9)),
+          border: pw.Border(bottom: pw.BorderSide(color: _rule, width: 0.7)),
         ),
         children: <pw.Widget>[
           pw.Padding(
@@ -1115,7 +1120,7 @@ pw.Widget _voucherItems(
           children: <pw.Widget>[
             _itemCell(line.name, f),
             _itemCell(line.quantityLabel, f, right: true, muted: true),
-            _itemCell(f.money(line.lineTotal), f, right: true, bold: true),
+            _itemCell(f.money(line.lineTotal), f, right: true),
           ],
         ),
       if (hidden > 0)
