@@ -296,11 +296,16 @@ void main() {
         '024 555 0199',
       );
 
-      // And the form is still the form, with the work on it intact.
+      // And the form is still the form, with the work on it intact. The
+      // invoice number is looked for by what it holds rather than by the label
+      // above it, so the check is about the work surviving and nothing else.
       expect(find.text('New Invoice'), findsOneWidget);
       expect(
-        tester.widget<TextFormField>(invoiceNo).controller!.text,
-        'INV-900',
+        tester
+            .widgetList<EditableText>(find.byType(EditableText))
+            .any((field) => field.controller.text == 'INV-900'),
+        isTrue,
+        reason: 'the invoice number typed before creating the supplier is gone',
       );
     });
 
@@ -321,8 +326,11 @@ void main() {
       expect(store.suppliers.map((s) => s.name), isNot(contains('Emerald')));
       expect(find.text('New Invoice'), findsOneWidget);
       expect(
-        tester.widget<TextFormField>(invoiceNo).controller!.text,
-        'INV-900',
+        tester
+            .widgetList<EditableText>(find.byType(EditableText))
+            .any((field) => field.controller.text == 'INV-900'),
+        isTrue,
+        reason: 'the invoice number typed before opening the dialog is gone',
       );
     });
   });
