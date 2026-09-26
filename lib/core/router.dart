@@ -7,6 +7,8 @@ import '../features/invoices/invoice_detail_screen.dart';
 import '../features/invoices/invoice_form_screen.dart';
 import '../features/invoices/invoices_screen.dart';
 import '../features/import/import_excel_screen.dart';
+import '../features/payments/payment_form_screen.dart';
+import '../features/payments/payments_screen.dart';
 import '../features/products/product_form_screen.dart';
 import '../features/products/products_screen.dart';
 import '../features/suppliers/supplier_form_screen.dart';
@@ -101,6 +103,28 @@ final routerProvider = Provider<GoRouter>((ref) {
                     parentNavigatorKey: _rootNavigatorKey,
                     builder: (context, state) => ProductFormScreen(
                       productId: state.pathParameters['id'],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/payments',
+                builder: (context, state) => const PaymentsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => const PaymentFormScreen(),
+                  ),
+                  GoRoute(
+                    path: 'new/:supplierId',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => PaymentFormScreen(
+                      supplierId: state.pathParameters['supplierId'],
                     ),
                   ),
                 ],

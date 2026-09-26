@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 
+import '../models/payment.dart';
 import '../models/product.dart';
 import '../models/supplier.dart';
 import '../models/supplier_invoice.dart';
@@ -25,12 +26,18 @@ class BackupContent {
     required this.invoices,
     required this.products,
     required this.receipts,
+    this.payments,
   });
 
   final List<Supplier> suppliers;
   final List<SupplierInvoice> invoices;
   final List<Product> products;
   final Map<String, List<int>> receipts;
+
+  /// Null when the backup was taken before payments existed. That is not the
+  /// same as an empty ledger: restoring must leave the records she has now
+  /// alone rather than quietly replacing them with nothing.
+  final List<Payment>? payments;
 }
 
 class BackupService {
@@ -45,6 +52,7 @@ class BackupService {
     final allSuppliers = await store.loadSuppliers();
     final allInvoices = await store.loadInvoices();
     final allProducts = await store.loadProducts();
+    final allPayments = await store.loadPayments();
 
     final withoutIds = invoiceIds == null;
     final invoices = invoiceIds == null
@@ -65,6 +73,21 @@ class BackupService {
             .where((p) => usedProductNames.contains(p.normalizedName))
             .toList();
 
+    // A payment belongs to the invoices it settles, so a partial export keeps
+    // only the records that touch the invoices it carries. The slice of those
+    // records goes too, so the amounts in the backup still add up.
+    final exportedIds = invoices.map((i) => i.id).toSet();
+    final payments = [
+      for (final pay in allPayments)
+        if (pay.allocations.any((a) => exportedIds.contains(a.invoiceId)))
+          pay.copyWith(
+            allocations: [
+              for (final a in pay.allocations)
+                if (exportedIds.contains(a.invoiceId)) a,
+            ],
+          ),
+    ];
+
     final archive = Archive();
     archive.addFile(ArchiveFile.string(
       'suppliers.json',
@@ -79,14 +102,19 @@ class BackupService {
       jsonEncode(products.map((e) => e.toJson()).toList()),
     ));
     archive.addFile(ArchiveFile.string(
+      'payments.json',
+      jsonEncode(payments.map((e) => e.toJson()).toList()),
+    ));
+    archive.addFile(ArchiveFile.string(
       _manifestName,
       jsonEncode({
         'app': 'pfa_pharmacy_invoice_tracker',
-        'format': 2,
+        'format': 3,
         'exportedAt': DateTime.now().toIso8601String(),
         'suppliers': suppliers.length,
         'invoices': invoices.length,
         'products': products.length,
+        'payments': payments.length,
       }),
     ));
 
@@ -161,6 +189,20 @@ class BackupService {
       }
     }
 
+    // Likewise for payments: no payments.json means the backup predates the
+    // ledger, which is not the same as saying the ledger was empty.
+    final paymentsRaw = readString('payments.json');
+    List<Payment>? payments;
+    if (paymentsRaw != null) {
+      try {
+        payments = (jsonDecode(paymentsRaw) as List<dynamic>)
+            .map((e) => Payment.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (_) {
+        payments = null;
+      }
+    }
+
     final receiptsMap = <String, List<int>>{};
     for (final f in archive.files) {
       if (!f.isFile || !f.name.startsWith('receipts/')) continue;
@@ -175,6 +217,7 @@ class BackupService {
       invoices: invoices,
       products: products,
       receipts: receiptsMap,
+      payments: payments,
     );
   }
 
@@ -183,6 +226,12 @@ class BackupService {
     await store.saveSuppliers(content.suppliers);
     await store.saveInvoices(content.invoices);
     await store.saveProducts(content.products);
+    // Only a backup that carries records replaces the ledger. An older one
+    // leaves the records already here untouched, and the paid amounts on the
+    // restored invoices are re-read into records on the next load.
+    if (content.payments != null) {
+      await store.savePayments(content.payments!);
+    }
 
     // Restore is a replace, not a merge: drop receipts that the backup does
     // not contain so nothing stale survives.
@@ -252,6 +301,41 @@ class BackupService {
     buf.writeln(_row(['Name', 'Phone', 'Location', 'Notes']));
     for (final s in suppliers) {
       buf.writeln(_row([s.name, s.phone, s.location, s.notes]));
+    }
+    return buf.toString();
+  }
+
+  /// One row per invoice a payment settled, so the file lines up with the
+  /// Payments sheet in the workbook.
+  String paymentsCsv(
+    List<Payment> payments,
+    String Function(String invoiceId) invoiceNumberOf,
+    String Function(String invoiceId) supplierNameOf,
+  ) {
+    final buf = StringBuffer('\uFEFF');
+    buf.writeln(_row([
+      'Date',
+      'Supplier',
+      'Invoice No',
+      'Amount (GH₵)',
+      'Method',
+      'Reference',
+      'Note',
+      'Opening balance',
+    ]));
+    for (final p in payments) {
+      for (final a in p.allocations) {
+        buf.writeln(_row([
+          _date(p.date),
+          supplierNameOf(a.invoiceId),
+          invoiceNumberOf(a.invoiceId),
+          _pesewas(a.amountPesewas),
+          p.method,
+          p.reference,
+          p.notes,
+          p.isLegacy ? 'Yes' : 'No',
+        ]));
+      }
     }
     return buf.toString();
   }

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:pfa_pharmacy_invoice_tracker/data/backup_service.dart';
+import 'package:pfa_pharmacy_invoice_tracker/models/payment.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/supplier_invoice.dart';
 
 import 'helpers.dart';
@@ -118,6 +119,141 @@ void main() {
       service.readZip(zipPath),
       throwsA(isA<FormatException>()),
     );
+  });
+
+  group('payments in a backup', () {
+    Payment paymentOn(String id, List<String> invoiceIds, int amount) => Payment(
+          id: id,
+          date: DateTime(2026, 4, 2),
+          method: 'Bank Pay',
+          reference: 'TELLER-7',
+          allocations: [
+            for (final inv in invoiceIds)
+              PaymentAllocation(invoiceId: inv, amountPesewas: amount),
+          ],
+        );
+
+    test('round trips the payment records', () async {
+      final root = Directory.systemTemp.createTempSync('pay');
+      addTearDown(() => root.deleteSync(recursive: true));
+
+      final store = InMemoryLocalStore(
+        suppliers: [supplier('s1', 'Pharma Co')],
+        invoices: [invoice(id: 'i1', supplierId: 's1', amountPesewas: 20000)],
+        payments: [paymentOn('p1', ['i1'], 10000)],
+      );
+      final service = BackupService(
+        store: store,
+        receipts: TestReceiptStorage(p.join(root.path, 'receipts')),
+      );
+      final zipPath = p.join(root.path, 'payments.zip');
+      await service.exportZip(zipPath);
+
+      final content = await service.readZip(zipPath);
+      expect(content.payments, isNotNull);
+      expect(content.payments!.single.amountPesewas, 10000);
+      expect(content.payments!.single.invoiceIds, {'i1'});
+
+      final restored = InMemoryLocalStore();
+      await BackupService(
+        store: restored,
+        receipts: TestReceiptStorage(p.join(root.path, 'restored')),
+      ).importZip(zipPath);
+      expect(restored.payments.single.reference, 'TELLER-7');
+    });
+
+    test('a partial export carries only the payments it can explain', () async {
+      final root = Directory.systemTemp.createTempSync('pay-part');
+      addTearDown(() => root.deleteSync(recursive: true));
+
+      final store = InMemoryLocalStore(
+        suppliers: [supplier('s1', 'Pharma Co')],
+        invoices: [
+          invoice(id: 'i1', supplierId: 's1', amountPesewas: 20000),
+          invoice(id: 'i2', supplierId: 's1', amountPesewas: 8000),
+        ],
+        payments: [paymentOn('p1', ['i1', 'i2'], 5000)],
+      );
+      final service = BackupService(
+        store: store,
+        receipts: TestReceiptStorage(p.join(root.path, 'receipts')),
+      );
+      final zipPath = p.join(root.path, 'partial.zip');
+      await service.exportZip(zipPath, invoiceIds: {'i1'});
+
+      final content = await service.readZip(zipPath);
+      expect(content.invoices.single.id, 'i1');
+      // Only the slice for INV-001 travels, so the backup still adds up.
+      expect(content.payments!.single.invoiceIds, {'i1'});
+      expect(content.payments!.single.amountPesewas, 5000);
+    });
+
+    test('a backup with no payments.json leaves the ledger alone', () async {
+      final root = Directory.systemTemp.createTempSync('pay-old');
+      addTearDown(() => root.deleteSync(recursive: true));
+
+      // An archive written before payments existed: suppliers and invoices,
+      // with the paid amount typed straight onto the invoice.
+      final old = Archive()
+        ..addFile(ArchiveFile.string(
+          'suppliers.json',
+          jsonEncode([supplier('s1', 'Pharma Co').toJson()]),
+        ))
+        ..addFile(ArchiveFile.string(
+          'invoices.json',
+          jsonEncode([
+            invoice(
+              id: 'i1',
+              supplierId: 's1',
+              amountPesewas: 20000,
+              amountPaidPesewas: 5000,
+            ).toJson(),
+          ]),
+        ));
+      final zipPath = p.join(root.path, 'old.zip');
+      File(zipPath).writeAsBytesSync(ZipEncoder().encode(old)!);
+
+      final store = InMemoryLocalStore(
+        payments: [paymentOn('keep', ['i1'], 5000)],
+      );
+      final service = BackupService(
+        store: store,
+        receipts: TestReceiptStorage(p.join(root.path, 'receipts')),
+      );
+
+      final content = await service.readZip(zipPath);
+      expect(content.payments, isNull);
+
+      await service.importZip(zipPath);
+      // The records she already had are not wiped by an older backup.
+      expect(store.payments.single.invoiceIds, {'i1'});
+      expect(store.invoices.single.amountPaidPesewas, 5000);
+    });
+
+    test('paymentsCsv writes one row per invoice settled', () {
+      final service = BackupService(
+        store: InMemoryLocalStore(),
+        receipts:
+            TestReceiptStorage(Directory.systemTemp.createTempSync('csv3').path),
+      );
+      final csv = service.paymentsCsv(
+        [paymentOn('p1', ['i1', 'i2'], 5000)],
+        (id) => 'INV-$id',
+        (_) => 'Pharma Co',
+      );
+
+      expect(csv.startsWith('\uFEFF'), isTrue);
+      expect(
+        csv.substring(1).trimRight().split('\n').first,
+        'Date,Supplier,Invoice No,Amount (GH₵),Method,Reference,Note,'
+        'Opening balance',
+      );
+      // One payment over two invoices is two rows.
+      expect(csv.trimRight().split('\n'), hasLength(3));
+      expect(csv, contains('02/04/2026,Pharma Co,INV-i1,50.00'));
+      expect(csv, contains('INV-i2,50.00'));
+      expect(csv, contains('TELLER-7'));
+    });
   });
 
   group('CSV export', () {

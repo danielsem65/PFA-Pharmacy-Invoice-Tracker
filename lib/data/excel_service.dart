@@ -1,6 +1,7 @@
 import 'package:excel/excel.dart';
 import 'package:intl/intl.dart';
 
+import '../models/payment.dart';
 import '../models/product.dart';
 import '../models/supplier.dart';
 import '../models/supplier_invoice.dart';
@@ -145,6 +146,8 @@ List<int> buildWorkbookBytes({
   required List<SupplierInvoice> invoices,
   required List<Supplier> suppliers,
   required List<Product> products,
+  required List<Payment> payments,
+  required List<SupplierInvoice> allInvoices,
   required String Function(String supplierId) supplierNameOf,
   DateTime? exportedAt,
 }) {
@@ -153,9 +156,17 @@ List<int> buildWorkbookBytes({
   // opens on the invoices and the totals are the last thing to read.
   _buildInvoicesSheet(excel, invoices, supplierNameOf);
   _buildInvoiceItemsSheet(excel, invoices, supplierNameOf);
+  _buildPaymentsSheet(excel, payments, allInvoices, supplierNameOf);
   _buildSuppliersSheet(excel, suppliers);
   _buildProductsSheet(excel, products);
-  _buildSummarySheet(excel, invoices, suppliers, products, exportedAt);
+  _buildSummarySheet(
+    excel,
+    invoices,
+    suppliers,
+    products,
+    payments,
+    exportedAt,
+  );
   // A new workbook starts with an empty sheet called Sheet1. It is of no use
   // here, so it goes rather than sitting empty in front of the real sheets.
   excel.delete('Sheet1');
@@ -165,6 +176,61 @@ List<int> buildWorkbookBytes({
     throw StateError('The Excel workbook could not be encoded.');
   }
   return bytes;
+}
+
+/// One row per invoice a payment settled, the same shape as the Invoice Items
+/// sheet, so a single transfer reads as several rows that can be pivoted by
+/// invoice. The whole ledger is written, not just the invoices on screen.
+void _buildPaymentsSheet(
+  Excel excel,
+  List<Payment> payments,
+  List<SupplierInvoice> allInvoices,
+  String Function(String supplierId) supplierNameOf,
+) {
+  final sheet = excel['Payments'];
+  _writeHeader(
+    sheet,
+    const [
+      'Date',
+      'Supplier',
+      'Invoice No',
+      'Amount (GH₵)',
+      'Method',
+      'Reference',
+      'Note',
+      'Opening balance',
+    ],
+    const [12.0, 22.0, 14.0, 15.0, 15.0, 18.0, 40.0, 15.0],
+  );
+
+  final byId = <String, SupplierInvoice>{
+    for (final inv in allInvoices) inv.id: inv,
+  };
+  for (final p in payments) {
+    for (final a in p.allocations) {
+      final row = sheet.maxRows;
+      final inv = byId[a.invoiceId];
+      sheet.appendRow([
+        _dateCell(p.date),
+        TextCellValue(
+          inv == null ? 'Unknown supplier' : supplierNameOf(inv.supplierId),
+        ),
+        TextCellValue(inv?.invoiceNumber ?? a.invoiceId),
+        _moneyCell(a.amountPesewas),
+        TextCellValue(p.method),
+        TextCellValue(p.reference),
+        TextCellValue(p.notes),
+        TextCellValue(p.isLegacy ? 'Yes' : 'No'),
+      ]);
+      _styleDataRow(
+        sheet,
+        row,
+        money: const {3},
+        dates: const {0},
+        wrap: const {6},
+      );
+    }
+  }
 }
 
 void _buildInvoicesSheet(
@@ -305,6 +371,7 @@ void _buildSummarySheet(
   List<SupplierInvoice> invoices,
   List<Supplier> suppliers,
   List<Product> products,
+  List<Payment> payments,
   DateTime? exportedAt,
 ) {
   final now = exportedAt ?? DateTime.now();
@@ -361,6 +428,7 @@ void _buildSummarySheet(
   line('Invoices', '${invoices.length}');
   line('Suppliers', '${suppliers.length}');
   line('Products', '${products.length}');
+  line('Payments', '${payments.length}');
   moneyLine('Total billed (GH₵)', billed);
   moneyLine('Total paid (GH₵)', paid);
   moneyLine('Outstanding (GH₵)', outstanding);

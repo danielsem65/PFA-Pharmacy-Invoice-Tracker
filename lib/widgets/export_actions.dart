@@ -9,8 +9,10 @@ import 'package:path_provider/path_provider.dart';
 import '../data/backup_service.dart';
 import '../data/excel_service.dart';
 import '../features/invoices/invoices_controller.dart';
+import '../features/payments/payments_controller.dart';
 import '../features/products/products_controller.dart';
 import '../features/suppliers/suppliers_controller.dart';
+import '../models/payment.dart';
 import '../models/product.dart';
 import '../models/supplier.dart';
 import '../models/supplier_invoice.dart';
@@ -126,6 +128,45 @@ Future<void> exportCsv(
   );
 }
 
+/// Writes the payment ledger as a flat CSV: one row per invoice a record
+/// settled, which is what makes a single transfer readable in a spreadsheet.
+Future<void> exportPaymentsCsv(
+  BuildContext context,
+  WidgetRef ref, {
+  List<Payment>? paymentScope,
+}) async {
+  final payments = paymentScope ?? ref.read(paymentsProvider);
+  if (payments.isEmpty) {
+    toast(context, 'There are no payments to export yet.');
+    return;
+  }
+  final invoices = ref.read(invoicesProvider);
+  final suppliers = ref.read(suppliersProvider);
+
+  SupplierInvoice? byId(String id) {
+    for (final i in invoices) {
+      if (i.id == id) return i;
+    }
+    return null;
+  }
+
+  final name = 'InvoiceTracker_Payments_${_stamp()}.csv';
+  await _writeCsv(
+    context,
+    name,
+    ref.read(backupServiceProvider).paymentsCsv(
+      payments,
+      (id) => byId(id)?.invoiceNumber ?? id,
+      (id) {
+        final inv = byId(id);
+        if (inv == null) return 'Unknown supplier';
+        return _supplierName(suppliers, inv.supplierId);
+      },
+    ),
+    'Payments exported (${payments.length}).',
+  );
+}
+
 /// Writes a real .xlsx workbook: a summary, the invoices, all suppliers and
 /// all products. Money and dates are written as numbers and dates, so the
 /// file can be totalled and sorted in Excel.
@@ -156,6 +197,11 @@ Future<void> exportExcel(
       invoices: selected,
       suppliers: suppliers,
       products: products,
+      payments: ref.read(paymentsProvider),
+      // The payments sheet always describes the whole ledger, so it needs every
+      // invoice to name the ones each record settled, not just the rows on
+      // screen.
+      allInvoices: all,
       supplierNameOf: (id) => _supplierName(suppliers, id),
     );
     await File(path.path).writeAsBytes(bytes, flush: true);
@@ -223,6 +269,7 @@ Future<void> restoreBackup(BuildContext context, WidgetRef ref) async {
     ref.invalidate(suppliersProvider);
     ref.invalidate(invoicesProvider);
     ref.invalidate(productsProvider);
+    ref.invalidate(paymentsProvider);
     if (context.mounted) toast(context, 'Backup restored.');
   } catch (e) {
     if (context.mounted) toast(context, 'Restore failed: $e');

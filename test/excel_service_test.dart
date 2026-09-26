@@ -5,6 +5,7 @@ import 'package:excel/excel.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pfa_pharmacy_invoice_tracker/data/excel_service.dart';
 import 'package:pfa_pharmacy_invoice_tracker/features/import/invoice_importer.dart';
+import 'package:pfa_pharmacy_invoice_tracker/models/payment.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/product.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/supplier_invoice.dart';
 
@@ -14,38 +15,50 @@ List<String> headersOf(XlsxSheet sheet, int row) =>
     [for (final cell in sheet.rowAt(row)) displayText(cell).trim()];
 
 List<int> buildSampleWorkbook() {
+  final invoices = <SupplierInvoice>[
+    invoice(
+      id: 'i1',
+      supplierId: 's1',
+      invoiceNumber: 'INV-77',
+      invoiceDate: DateTime(2026, 3, 4),
+      receivedDate: DateTime(2026, 3, 6),
+      dueDate: DateTime(2026, 4, 4),
+      amountPesewas: 450000,
+      taxRatePercent: 15,
+      amountPaidPesewas: 100000,
+      lines: [
+        InvoiceLine(
+          name: 'Artemether/Lumefantrine',
+          boxes: 2,
+          piecesPerBox: 12,
+          pricePerBoxPesewas: 9000,
+        ),
+        InvoiceLine(
+          name: 'ORS Sachet',
+          boxes: 10,
+          piecesPerBox: 1,
+          pricePerBoxPesewas: 350,
+        ),
+      ],
+    ),
+  ];
   return buildWorkbookBytes(
-    invoices: [
-      invoice(
-        id: 'i1',
-        supplierId: 's1',
-        invoiceNumber: 'INV-77',
-        invoiceDate: DateTime(2026, 3, 4),
-        receivedDate: DateTime(2026, 3, 6),
-        dueDate: DateTime(2026, 4, 4),
-        amountPesewas: 450000,
-        taxRatePercent: 15,
-        amountPaidPesewas: 100000,
-        lines: [
-          InvoiceLine(
-            name: 'Artemether/Lumefantrine',
-            boxes: 2,
-            piecesPerBox: 12,
-            pricePerBoxPesewas: 9000,
-          ),
-          InvoiceLine(
-            name: 'ORS Sachet',
-            boxes: 10,
-            piecesPerBox: 1,
-            pricePerBoxPesewas: 350,
-          ),
-        ],
-      ),
-    ],
+    invoices: invoices,
     suppliers: [supplier('s1', 'Medi Trust')],
     products: [
       Product(id: 'p1', name: 'ORS Sachet', piecesPerBox: 1, pricePerBoxPesewas: 350),
     ],
+    payments: <Payment>[
+      Payment(
+        date: DateTime(2026, 3, 8),
+        method: 'Bank Pay',
+        reference: 'TELLER-9',
+        allocations: const <PaymentAllocation>[
+          PaymentAllocation(invoiceId: 'i1', amountPesewas: 100000),
+        ],
+      ),
+    ],
+    allInvoices: invoices,
     supplierNameOf: (id) => id == 's1' ? 'Medi Trust' : 'Unknown',
     exportedAt: DateTime(2026, 3, 10, 9, 30),
   );
@@ -57,7 +70,14 @@ void main() {
       final workbook = readXlsx(buildSampleWorkbook());
       expect(
         workbook.sheetNames,
-        containsAll(<String>['Invoices', 'Invoice Items', 'Suppliers', 'Products', 'Summary']),
+        containsAll(<String>[
+          'Invoices',
+          'Invoice Items',
+          'Payments',
+          'Suppliers',
+          'Products',
+          'Summary',
+        ]),
       );
     });
 
@@ -65,11 +85,48 @@ void main() {
       final workbook = readXlsx(buildSampleWorkbook());
       // A new workbook arrives with an empty Sheet1, which is of no use here.
       expect(workbook.sheetNames, isNot(contains('Sheet1')));
-      expect(workbook.sheetNames, hasLength(5));
+      expect(workbook.sheetNames, hasLength(6));
       // The records come first, so the workbook opens on the invoices, and the
       // summary closes the book.
       expect(workbook.sheetNames.first, 'Invoices');
       expect(workbook.sheetNames.last, 'Summary');
+    });
+
+    test('writes a row per invoice a payment settled', () {
+      final sheet = readXlsx(buildSampleWorkbook()).sheet('Payments');
+      final headers = headersOf(sheet, 0);
+      expect(
+        headers,
+        containsAll(<String>[
+          'Date',
+          'Supplier',
+          'Invoice No',
+          'Amount (GH₵)',
+          'Method',
+          'Reference',
+          'Opening balance',
+        ]),
+      );
+      expect(sheet.rowCount, 2); // heading plus the one settled invoice
+      final row = sheet.rowAt(1);
+      expect(row[headers.indexOf('Supplier')], 'Medi Trust');
+      expect(row[headers.indexOf('Invoice No')], 'INV-77');
+      expect(row[headers.indexOf('Method')], 'Bank Pay');
+      expect(row[headers.indexOf('Reference')], 'TELLER-9');
+      // Money is a number, so the column can be summed in Excel like any other.
+      expect(row[headers.indexOf('Amount (GH₵)')], closeTo(1000.0, 0.001));
+      expect(row[headers.indexOf('Date')], DateTime(2026, 3, 8));
+    });
+
+    test('counts the payment records in the summary', () {
+      final sheet = readXlsx(buildSampleWorkbook()).sheet('Summary');
+      for (var r = 0; r < sheet.rowCount; r++) {
+        if (displayText(sheet.rowAt(r)[0]).trim() == 'Payments') {
+          expect(sheet.rowAt(r)[1], '1');
+          return;
+        }
+      }
+      fail('the summary has no row labelled "Payments"');
     });
 
     test('merges and centres the summary title across two columns', () {

@@ -32,6 +32,12 @@ class AppSidebar extends StatelessWidget {
       label: 'Products',
       accent: Aurora.violet,
     ),
+    _NavItemData(
+      icon: Icons.payments_outlined,
+      selectedIcon: Icons.payments,
+      label: 'Payments',
+      accent: Aurora.emerald,
+    ),
   ];
 
   @override
