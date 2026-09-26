@@ -4,10 +4,10 @@ import 'package:window_manager/window_manager.dart';
 
 import 'app.dart';
 
-/// Small enough to sit beside another window without swallowing the desktop,
-/// and still wide enough for the invoice tables. The floor sits a little under
-/// the opening size so the opening size is always reachable.
-const _openingSize = Size(950, 550);
+/// The size the app was settled on by hand: wide enough for the invoice tables
+/// to breathe, short enough to sit beside another window on a 1366x768 screen.
+/// The floor sits under the opening size so the opening size is reachable.
+const _openingSize = Size(1160, 615);
 const _smallestSize = Size(900, 500);
 
 Future<void> main() async {
