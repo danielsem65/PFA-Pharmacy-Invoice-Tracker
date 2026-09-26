@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pfa_pharmacy_invoice_tracker/app.dart';
 import 'package:pfa_pharmacy_invoice_tracker/data/app_database.dart';
+import 'package:pfa_pharmacy_invoice_tracker/features/invoices/invoice_form_screen.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/supplier_invoice.dart';
 import 'package:pfa_pharmacy_invoice_tracker/widgets/app_sidebar.dart';
 import 'package:pfa_pharmacy_invoice_tracker/widgets/desktop_form.dart';
@@ -269,7 +270,10 @@ void main() {
       await tester.scrollUntilVisible(
         invoiceNo,
         -200,
-        scrollable: find.byType(Scrollable).last,
+        scrollable: find.descendant(
+          of: find.byType(InvoiceFormScreen),
+          matching: find.byType(Scrollable),
+        ),
       );
       await tester.pumpAndSettle();
       return tester.widget<TextFormField>(invoiceNo).controller!.text;
