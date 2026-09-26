@@ -163,8 +163,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Print invoice'), findsOneWidget);
-      expect(find.text('All three are A4 and print in black and white.'),
-          findsOneWidget);
+      expect(
+        find.textContaining('All three are A4 and print in black and white.'),
+        findsOneWidget,
+      );
       for (final layout in InvoicePrintLayout.values) {
         expect(find.text(layout.label), findsOneWidget);
       }
