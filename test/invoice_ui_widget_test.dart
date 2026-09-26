@@ -264,12 +264,15 @@ void main() {
     }
 
     // What makes the form the same form: the same State object, holding the same
-    // controllers. Read as the pair of them rather than by hunting for a field
-    // in a scrolling list, which says nothing the State does not.
-    ({Object state, String number}) formBefore(WidgetTester tester) {
+    // controller. Both are taken once, while the field is on screen, and read
+    // back afterwards - which says more about the form surviving than hunting
+    // for a field in a scrolling list would.
+    ({Object state, TextEditingController number}) formBefore(
+      WidgetTester tester,
+    ) {
       return (
         state: tester.state(form),
-        number: tester.widget<TextFormField>(invoiceNo).controller!.text,
+        number: tester.widget<TextFormField>(invoiceNo).controller!,
       );
     }
 
@@ -312,7 +315,7 @@ void main() {
       // The form was never torn down, and still holds what was typed on it.
       expect(find.text('New Invoice'), findsOneWidget);
       expect(tester.state(form), same(before.state));
-      expect(formBefore(tester).number, 'INV-900');
+      expect(before.number.text, 'INV-900');
     });
 
     testWidgets('cancelling the dialog changes nothing at all', (tester) async {
@@ -333,7 +336,7 @@ void main() {
       expect(store.suppliers.map((s) => s.name), isNot(contains('Emerald')));
       expect(find.text('New Invoice'), findsOneWidget);
       expect(tester.state(form), same(before.state));
-      expect(formBefore(tester).number, 'INV-900');
+      expect(before.number.text, 'INV-900');
     });
   });
 }
