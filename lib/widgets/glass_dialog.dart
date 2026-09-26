@@ -27,45 +27,63 @@ Future<T?> showGlassDialog<T>({
   Color? barrierColor,
   String? barrierLabel,
 }) {
-  return showDialog<T>(
-    context: context,
-    barrierDismissible: barrierDismissible,
-    barrierColor: barrierColor,
-    barrierLabel: barrierLabel,
-    builder: (dialogContext) {
-      return Theme(
-        // Scoped to this dialog only, and read by both the Dialog below and the
-        // AlertDialog the caller is about to return.
-        data: Theme.of(dialogContext).copyWith(
-          dialogTheme: const DialogThemeData(
-            backgroundColor: Colors.transparent,
-            surfaceTintColor: Colors.transparent,
-            elevation: 0,
-            // Exactly the margin a dialog had before, so nothing about how much
-            // room the content gets has changed.
-            insetPadding: EdgeInsets.symmetric(horizontal: 40, vertical: 32),
-            shape: RoundedRectangleBorder(),
+  // The route is pushed by hand, and the one thing that is deliberate about it
+  // is that it has no name.
+  //
+  // [showDialog] names its route, and a named route is a *page* as far as
+  // go_router is concerned: when one is popped, the router believes a page of
+  // the app was popped and pops its own top page to keep even. Opening the New
+  // supplier dialog from the invoice form therefore took the form's own route
+  // down with the dialog, dropping the user back on the invoice list and
+  // throwing away everything they had typed. An unnamed route is one of the
+  // router's "pageless" routes, and it leaves their pops alone.
+  //
+  // [RawDialogRoute] is the same route [showDialog] builds internally, so the
+  // barrier, the fade, the dismissal and the keyboard behaviour are unchanged.
+  return Navigator.of(context, rootNavigator: true).push<T>(
+    RawDialogRoute<T>(
+      settings: const RouteSettings(),
+      barrierDismissible: barrierDismissible,
+      barrierColor: barrierColor,
+      barrierLabel: barrierLabel,
+      transitionDuration: const Duration(milliseconds: 150),
+      reverseTransitionDuration: const Duration(milliseconds: 100),
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
+        return Theme(
+          // Scoped to this dialog only, and read by both the Dialog below and
+          // the AlertDialog the caller is about to return.
+          data: Theme.of(dialogContext).copyWith(
+            dialogTheme: const DialogThemeData(
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              // Exactly the margin a dialog had before, so nothing about how
+              // much room the content gets has changed.
+              insetPadding: EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+              shape: RoundedRectangleBorder(),
+            ),
+            // A dialog is a glass pane, not a sheet of paper.
+            canvasColor: Colors.transparent,
           ),
-          // A dialog is a glass pane, not a sheet of paper.
-          canvasColor: Colors.transparent,
-        ),
-        child: Dialog(
-          child: GlassSurface(
-            level: GlassLevel.ultra,
-            radius: 24,
-            // The one bound worth adding: a ceiling on width, so the receipt
-            // viewer and the wide forms cannot stretch a pane across a 4K
-            // monitor. Height is left entirely to the content, as before.
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
-              // Built under the pane, so the caller's context sits below this
-              // dialog in the tree, and the navigator it finds is the one this
-              // dialog was pushed onto - the one whose top route is the dialog.
-              child: Builder(builder: builder),
+          child: Dialog(
+            child: GlassSurface(
+              level: GlassLevel.ultra,
+              radius: 24,
+              // The one bound worth adding: a ceiling on width, so the receipt
+              // viewer and the wide forms cannot stretch a pane across a 4K
+              // monitor. Height is left entirely to the content, as before.
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                // Built under the pane, so the caller's context sits below this
+                // dialog in the tree, and the navigator it finds is the one this
+                // dialog was pushed onto - the one whose top route is the
+                // dialog.
+                child: Builder(builder: builder),
+              ),
             ),
           ),
-        ),
-      );
-    },
+        );
+      },
+    ),
   );
 }
