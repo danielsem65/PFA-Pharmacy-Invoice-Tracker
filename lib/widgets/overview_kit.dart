@@ -455,13 +455,11 @@ class PanelTitle extends StatelessWidget {
     required this.title,
     this.icon,
     this.trailing,
-    this.iconColor,
   });
 
   final String title;
   final IconData? icon;
   final Widget? trailing;
-  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -470,7 +468,7 @@ class PanelTitle extends StatelessWidget {
     return Row(
       children: <Widget>[
         if (icon != null) ...<Widget>[
-          Icon(icon, size: 18, color: iconColor ?? scheme.primary),
+          Icon(icon, size: 18, color: scheme.primary),
           const SizedBox(width: 8),
         ],
         Expanded(

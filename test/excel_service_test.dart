@@ -122,7 +122,11 @@ void main() {
       final sheet = readXlsx(buildSampleWorkbook()).sheet('Summary');
       for (var r = 0; r < sheet.rowCount; r++) {
         if (displayText(sheet.rowAt(r)[0]).trim() == 'Payments') {
-          expect(sheet.rowAt(r)[1], '1');
+          // Counted from the sheet rather than typed in, so it follows a
+          // payment being added or removed.
+          final value = sheet.rowAt(r)[1];
+          expect(value, isA<XlsxFormula>());
+          expect((value! as XlsxFormula).formula, 'COUNTA(Payments!\$A\$2:\$A\$2)');
           return;
         }
       }
@@ -303,8 +307,14 @@ void main() {
       // invoice row itself.
       final workbook = XlsxWorkbook([
         XlsxSheet('Invoices', [
-          ['Supplier', 'Invoice No', 'Amount', 'Paid'],
-          ['Medi Trust', 'INV-9', 900.0, const XlsxFormula('SUMIF(A:A,B2,C:C)')],
+          ['Invoice Date', 'Supplier', 'Invoice No', 'Amount', 'Paid'],
+          [
+            DateTime(2026, 3, 4),
+            'Medi Trust',
+            'INV-9',
+            900.0,
+            const XlsxFormula('SUMIF(A:A,B2,C:C)'),
+          ],
         ]),
         XlsxSheet('Payments', [
           ['Date', 'Supplier', 'Invoice No', 'Amount'],
@@ -317,7 +327,13 @@ void main() {
       final plan = buildImportPlan(
         sheet: workbook.sheet('Invoices'),
         headerRowIndex: 0,
-        mapping: detectMapping(const ['Supplier', 'Invoice No', 'Amount', 'Paid']),
+        mapping: detectMapping(const [
+          'Invoice Date',
+          'Supplier',
+          'Invoice No',
+          'Amount',
+          'Paid',
+        ]),
         existingSuppliers: const [],
         existingInvoices: const [],
         paidByInvoiceNumber: paidTotalsByInvoiceNumber(workbook),

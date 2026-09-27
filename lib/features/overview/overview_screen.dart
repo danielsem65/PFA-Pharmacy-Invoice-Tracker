@@ -643,21 +643,22 @@ class _AttentionPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          PanelHeader(
-            tint: alerting ? Aurora.rose : null,
-            child: PanelTitle(
-              title: 'Needs attention',
-              icon: Icons.priority_high_rounded,
-              iconColor: alerting ? Aurora.rose : null,
-              trailing: invoices.isEmpty
-                  ? null
-                  : MiniPill(
-                      '${invoices.length} late',
-                      color: Aurora.rose,
-                      dense: true,
-                    ),
+          // The tab strip above already names this panel and carries its icon,
+          // so all this strip has left to say is how many are late. With
+          // nothing late there is nothing to say, and no bar at all.
+          if (alerting)
+            PanelHeader(
+              tint: Aurora.rose,
+              child: Row(
+                children: <Widget>[
+                  MiniPill(
+                    '${invoices.length} late',
+                    color: Aurora.rose,
+                    dense: true,
+                  ),
+                ],
+              ),
             ),
-          ),
           if (invoices.isEmpty)
             Padding(
               padding:
@@ -896,13 +897,16 @@ class _RecentPanel extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             PanelHeader(
-              child: PanelTitle(
-                title: 'Recent payments',
-                icon: Icons.history_rounded,
-                trailing: TextButton(
-                  onPressed: () => context.go('/payments'),
-                  child: const Text('See all'),
-                ),
+              // As above: the tab strip names the panel, so only the way on to
+              // the full list is repeated here.
+              child: Row(
+                children: <Widget>[
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => context.go('/payments'),
+                    child: const Text('See all'),
+                  ),
+                ],
               ),
             ),
             if (payments.isEmpty)
