@@ -89,6 +89,23 @@ List<List<Object?>> _readSheet(Sheet sheet) {
   ];
 }
 
+/// A cell that holds a formula rather than a number.
+///
+/// The excel package writes no cached result alongside a formula, so the text
+/// of the expression is genuinely all there is to read back. It is kept as its
+/// own type instead of a bare string so that a reader can tell "this is a
+/// number" from "this is a number as far as Excel is concerned" — otherwise
+/// [parseNumber] would helpfully strip the letters out of `SUMIF(...)` and hand
+/// back whatever digits the cell references happened to contain.
+class XlsxFormula {
+  const XlsxFormula(this.formula);
+
+  final String formula;
+
+  @override
+  String toString() => formula;
+}
+
 /// Unwraps one typed cell into a plain Dart value.
 Object? plainValue(CellValue? cell) {
   if (cell == null) return null;
@@ -101,9 +118,7 @@ Object? plainValue(CellValue? cell) {
     final DateTimeCellValue v => v.asDateTimeLocal(),
     // Times are not used by any sheet column, so the readable form is enough.
     final TimeCellValue v => v.toString(),
-    // A formula cell keeps no cached result, so the expression is all we can
-    // offer. Sheets meant for import should hold values, not formulas.
-    final FormulaCellValue v => v.formula,
+    final FormulaCellValue v => XlsxFormula(v.formula),
   };
 }
 
@@ -266,6 +281,8 @@ void _buildInvoicesSheet(
 
   for (final inv in invoices) {
     final row = sheet.maxRows;
+    // Excel counts rows from one, the sheet counts them from zero.
+    final n = row + 1;
     sheet.appendRow([
       TextCellValue(supplierNameOf(inv.supplierId)),
       TextCellValue(inv.invoiceNumber),
@@ -276,9 +293,12 @@ void _buildInvoicesSheet(
       _dateCell(inv.dueDate),
       DoubleCellValue(inv.taxRatePercent),
       _moneyCell(inv.amountPesewas),
-      _moneyCell(inv.totalPesewas),
-      _moneyCell(inv.amountPaidPesewas),
-      _moneyCell(inv.balancePesewas),
+      // Total, paid and balance are worked out rather than written down, so
+      // that adding a row to Payments moves the money on this sheet by itself.
+      // The tax is rounded here for the same reason the model rounds it.
+      _formulaCell('I$n+ROUND(I$n*H$n/100,2)'),
+      _formulaCell('SUMIF(Payments!\$C:\$C,\$B$n,Payments!\$D:\$D)'),
+      _formulaCell('J$n-K$n'),
       TextCellValue(inv.statusLabel),
       TextCellValue(inv.paymentMethod),
       _nullableDateCell(inv.paidDate),
@@ -323,7 +343,7 @@ void _buildInvoiceItemsSheet(
         IntCellValue(line.boxes),
         IntCellValue(line.piecesPerBox),
         _moneyCell(line.pricePerBoxPesewas),
-        _moneyCell(line.totalPesewas),
+        _formulaCell('D${row + 1}*F${row + 1}'),
       ]);
       _styleDataRow(sheet, row, money: const {5, 6});
     }
@@ -377,15 +397,11 @@ void _buildSummarySheet(
   final now = exportedAt ?? DateTime.now();
   final sheet = excel['Summary'];
 
-  var billed = 0;
-  var paid = 0;
-  var outstanding = 0;
+  // The money totals are formulas now, but open/overdue are a judgement about
+  // today's date rather than arithmetic, so they stay as written-down counts.
   var open = 0;
   var overdue = 0;
   for (final inv in invoices) {
-    billed += inv.totalPesewas;
-    paid += inv.amountPaidPesewas;
-    outstanding += inv.balancePesewas;
     final status = inv.statusAt(now);
     if (status == InvoiceStatus.overdue) {
       overdue++;
@@ -400,13 +416,28 @@ void _buildSummarySheet(
     sheet.row(row)[0]?.cellStyle = _labelStyle;
   }
 
-  /// Totals go in as numbers, so they can be summed in Excel like any other.
-  void moneyLine(String label, int pesewas) {
+  /// The same total, but pointing at the Invoices sheet, so a payment added
+  /// there is already counted by the time anyone reads this line.
+  void sumLine(String label, String column) {
     final row = sheet.maxRows;
-    sheet.appendRow([TextCellValue(label), _moneyCell(pesewas)]);
+    final last = invoices.length + 1;
+    sheet.appendRow([
+      TextCellValue(label),
+      _formulaCell('SUM(Invoices!\$$column\$2:\$$column\$$last)'),
+    ]);
     final cells = sheet.row(row);
     cells[0]?.cellStyle = _labelStyle;
     cells[1]?.cellStyle = _moneyStyle;
+  }
+
+  void countLine(String label, String sheetName, String column, int count) {
+    final row = sheet.maxRows;
+    final last = count + 1;
+    sheet.appendRow([
+      TextCellValue(label),
+      _formulaCell('COUNTA($sheetName!\$$column\$2:\$$column\$$last)'),
+    ]);
+    sheet.row(row)[0]?.cellStyle = _labelStyle;
   }
 
   sheet.setColumnWidth(0, 26);
@@ -425,13 +456,13 @@ void _buildSummarySheet(
   sheet.setMergedCellStyle(titleCell, _titleStyle);
   sheet.cell(titleCell).cellStyle = _titleStyle;
   line('Exported', DateFormat('dd/MM/yyyy HH:mm').format(now));
-  line('Invoices', '${invoices.length}');
-  line('Suppliers', '${suppliers.length}');
-  line('Products', '${products.length}');
-  line('Payments', '${payments.length}');
-  moneyLine('Total billed (GH₵)', billed);
-  moneyLine('Total paid (GH₵)', paid);
-  moneyLine('Outstanding (GH₵)', outstanding);
+  countLine('Invoices', 'Invoices', 'B', invoices.length);
+  countLine('Suppliers', 'Suppliers', 'A', suppliers.length);
+  countLine('Products', 'Products', 'A', products.length);
+  countLine('Payments', 'Payments', 'A', payments.length);
+  sumLine('Total billed (GH₵)', 'J');
+  sumLine('Total paid (GH₵)', 'K');
+  sumLine('Outstanding (GH₵)', 'L');
   line('Open / partly paid', '$open');
   line('Overdue', '$overdue');
 }
@@ -470,6 +501,10 @@ void _styleDataRow(
 }
 
 DoubleCellValue _moneyCell(int pesewas) => DoubleCellValue(pesewas / 100);
+
+/// A live Excel formula, written without the leading `=` the package expects
+/// to be implied by the cell type.
+FormulaCellValue _formulaCell(String formula) => FormulaCellValue(formula);
 
 DateCellValue _dateCell(DateTime date) =>
     DateCellValue(year: date.year, month: date.month, day: date.day);

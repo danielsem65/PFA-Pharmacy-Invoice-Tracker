@@ -83,43 +83,92 @@ class InvoiceDetailScreen extends ConsumerWidget {
                   builder: (context, constraints) {
                     final wide = constraints.maxWidth >= 760;
                     final details = [
-                      _row(context, 'Supplier', supplierName),
-                      _row(context, 'Invoice No', inv.invoiceNumber),
-                      if (inv.reference.isNotEmpty)
-                        _row(context, 'Ref / PO', inv.reference),
+                      _line(context, <Widget>[
+                        _pair(context, 'Supplier', supplierName),
+                      ]),
+                      const SizedBox(height: 2),
+                      _line(context, <Widget>[
+                        _pair(context, 'Invoice No', inv.invoiceNumber),
+                        if (inv.reference.isNotEmpty) ...<Widget>[
+                          const SizedBox(width: 28),
+                          _pair(context, 'Ref / PO', inv.reference),
+                        ],
+                      ]),
                       if (inv.description.isNotEmpty)
-                        _row(context, 'Description', inv.description),
+                        _line(context, <Widget>[
+                          _pair(context, 'Description', inv.description),
+                        ]),
                       if (inv.lines.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         _ItemsCard(invoice: inv),
                       ],
                       const Divider(height: 24),
-                      _row(context, 'Invoice Date', formatDate(inv.invoiceDate)),
-                      _row(context, 'Received', formatDate(inv.receivedDate)),
-                      _row(context, 'Due', formatDate(inv.dueDate)),
-                      _row(context, 'Status', status.label),
-                      const Divider(height: 24),
-                      _row(context, 'Amount', formatPesewas(inv.amountPesewas)),
+                      _line(context, <Widget>[
+                        _pair(context, 'Amount', formatPesewas(inv.amountPesewas)),
+                      ]),
                       if (inv.taxRatePercent > 0)
-                        _row(
+                        _line(context, <Widget>[
+                          _pair(
+                            context,
+                            'Tax (${inv.taxRatePercent}%)',
+                            formatPesewas(inv.taxPesewas),
+                          ),
+                        ]),
+                      _line(context, <Widget>[
+                        _pair(context, 'Total', formatPesewas(inv.totalPesewas)),
+                      ]),
+                      _line(context, <Widget>[
+                        _pair(
                           context,
-                          'Tax (${inv.taxRatePercent}%)',
-                          formatPesewas(inv.taxPesewas),
+                          'Paid',
+                          formatPesewas(inv.amountPaidPesewas),
                         ),
-                      _row(context, 'Total', formatPesewas(inv.totalPesewas)),
-                      _row(
-                        context,
-                        'Paid',
-                        formatPesewas(inv.amountPaidPesewas),
-                      ),
+                      ]),
                       if (inv.paidDate != null)
-                        _row(context, 'Paid Date', formatDate(inv.paidDate!)),
-                      _row(context, 'Payment method', inv.paymentMethod),
-                      _row(context, 'Balance', formatPesewas(inv.balancePesewas)),
+                        _line(context, <Widget>[
+                          _pair(
+                            context,
+                            'Paid Date',
+                            formatDate(inv.paidDate!),
+                          ),
+                        ]),
+                      _line(context, <Widget>[
+                        _pair(context, 'Payment method', inv.paymentMethod),
+                      ]),
+                      _line(context, <Widget>[
+                        _pair(
+                          context,
+                          'Balance',
+                          formatPesewas(inv.balancePesewas),
+                        ),
+                      ]),
                       if (inv.notes.isNotEmpty) ...[
                         const Divider(height: 24),
-                        _row(context, 'Notes', inv.notes),
+                        _line(context, <Widget>[
+                          _pair(context, 'Notes', inv.notes),
+                        ]),
                       ],
+                    ];
+
+                    // The dates and the status sit with the paperwork at the
+                    // bottom, not wedged between the items and the money.
+                    final paperTrail = <Widget>[
+                      _line(context, <Widget>[
+                        _pair(
+                          context,
+                          'Invoice Date',
+                          formatDate(inv.invoiceDate),
+                        ),
+                      ]),
+                      _line(context, <Widget>[
+                        _pair(context, 'Received', formatDate(inv.receivedDate)),
+                      ]),
+                      _line(context, <Widget>[
+                        _pair(context, 'Due', formatDate(inv.dueDate)),
+                      ]),
+                      _line(context, <Widget>[
+                        _pair(context, 'Status', status.label),
+                      ]),
                     ];
 
                     final side = <Widget>[
@@ -128,6 +177,8 @@ class InvoiceDetailScreen extends ConsumerWidget {
                         const SizedBox(height: 16),
                         _ReceiptsCard(invoice: inv, ref: ref, onOpen: _openReceipt),
                       ],
+                      const SizedBox(height: 16),
+                      ...paperTrail,
                     ];
 
                     if (!wide) {
@@ -167,38 +218,52 @@ class InvoiceDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _row(BuildContext context, String label, String value) {
-    final texts = Theme.of(context).textTheme;
+  /// One underlined line of the invoice, the way it is written on paper: the
+  /// label is bold, the answer to it is not, and the rule runs the whole width.
+  /// [segments] lets two short fields share a single line and a single rule.
+  Widget _line(BuildContext context, List<Widget> segments) {
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: scheme.surface.withValues(alpha: 0.55),
-          borderRadius: BorderRadius.circular(12),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.8),
+          ),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 150,
-              child: Text(
-                label,
-                style: texts.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+      ),
+      child: Wrap(
+        spacing: 0,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: segments,
+      ),
+    );
+  }
+
+  /// A bold `Label:` followed by the value in normal weight.
+  Widget _pair(BuildContext context, String label, String value) {
+    final texts = Theme.of(context).textTheme;
+    return Text.rich(
+      TextSpan(
+        children: <InlineSpan>[
+          TextSpan(
+            text: '$label: ',
+            style: texts.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
             ),
-            Expanded(
-              child: Text(
-                value,
-                style: texts.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-              ),
+          ),
+          TextSpan(
+            text: value,
+            style: texts.bodyLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+              // Pinned rather than inherited: the answer to a label is read,
+              // not shouted, and a bolder theme should not change that.
+              fontWeight: FontWeight.w400,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

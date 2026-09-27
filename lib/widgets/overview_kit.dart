@@ -27,6 +27,21 @@ BoxDecoration overviewPanelDecoration(
   );
 }
 
+/// The panel for something that wants a decision. The same card as everywhere
+/// else, warmed towards red so the eye finds it before it reads it.
+BoxDecoration alertPanelDecoration(BuildContext context) {
+  final scheme = Theme.of(context).colorScheme;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return BoxDecoration(
+    color: Color.alphaBlend(
+      Aurora.rose.withValues(alpha: isDark ? 0.12 : 0.07),
+      scheme.surface.withValues(alpha: 0.55),
+    ),
+    borderRadius: BorderRadius.circular(18),
+    border: Border.all(color: Aurora.rose.withValues(alpha: 0.45)),
+  );
+}
+
 /// The lighter well for the inside of a panel — a figure tile, a meter track.
 /// Flat on purpose: the panel it sits in already reads as the raised surface.
 BoxDecoration overviewWellDecoration(BuildContext context) {
@@ -397,26 +412,34 @@ class PanelHeader extends StatelessWidget {
     super.key,
     required this.child,
     this.padding = const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+    this.tint,
   });
 
   final Widget child;
   final EdgeInsets padding;
 
+  /// Colours the strip for a panel that is asking for attention. Null keeps
+  /// the calm house tint.
+  final Color? tint;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final lead = tint ?? scheme.primary;
     return Container(
       padding: padding,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: <Color>[
-            scheme.primary.withValues(alpha: 0.10),
-            scheme.primary.withValues(alpha: 0.04),
+            lead.withValues(alpha: 0.13),
+            lead.withValues(alpha: 0.05),
           ],
         ),
         border: Border(
           bottom: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.5),
+            color: tint == null
+                ? scheme.outlineVariant.withValues(alpha: 0.5)
+                : tint!.withValues(alpha: 0.32),
           ),
         ),
       ),
@@ -432,11 +455,13 @@ class PanelTitle extends StatelessWidget {
     required this.title,
     this.icon,
     this.trailing,
+    this.iconColor,
   });
 
   final String title;
   final IconData? icon;
   final Widget? trailing;
+  final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
@@ -445,7 +470,7 @@ class PanelTitle extends StatelessWidget {
     return Row(
       children: <Widget>[
         if (icon != null) ...<Widget>[
-          Icon(icon, size: 18, color: scheme.primary),
+          Icon(icon, size: 18, color: iconColor ?? scheme.primary),
           const SizedBox(width: 8),
         ],
         Expanded(

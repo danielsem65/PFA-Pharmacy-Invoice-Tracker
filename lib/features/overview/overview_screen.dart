@@ -118,23 +118,34 @@ class OverviewScreen extends ConsumerWidget {
                             invoicedTotal: summary.invoicedTotal,
                             paidTotal: summary.paidTotal,
                           ),
-                          right: _AttentionPanel(
-                            invoices: late,
-                            now: now,
-                            nameOf: nameOf,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _WideRow(
-                          left: _SupplierPanel(
+                          right: _SupplierPanel(
                             shares: shares,
                             total: summary.outstanding,
                           ),
-                          right: _RecentPanel(
-                            payments: recent.take(5).toList(),
-                            nameOf: nameOf,
-                            invoices: invoices,
-                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _SwipeBand(
+                          pages: <_SwipePage>[
+                            _SwipePage(
+                              label: 'Needs attention',
+                              icon: Icons.priority_high_rounded,
+                              tint: Aurora.rose,
+                              child: _AttentionPanel(
+                                invoices: late,
+                                now: now,
+                                nameOf: nameOf,
+                              ),
+                            ),
+                            _SwipePage(
+                              label: 'Recent payments',
+                              icon: Icons.history_rounded,
+                              child: _RecentPanel(
+                                payments: recent.take(5).toList(),
+                                nameOf: nameOf,
+                                invoices: invoices,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -150,6 +161,161 @@ class OverviewScreen extends ConsumerWidget {
     if (hour < 12) return 'Good morning';
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
+  }
+}
+
+/// One page of the swipeable band: the name it is called by in the tab strip,
+/// and the panel that answers to it.
+class _SwipePage {
+  const _SwipePage({
+    required this.label,
+    required this.icon,
+    required this.child,
+    this.tint,
+  });
+
+  final String label;
+  final IconData icon;
+  final Widget child;
+  final Color? tint;
+}
+
+/// The two short panels share one swipeable band, so the thing that needs
+/// attention and the record of what was paid can be flicked between without
+/// scrolling past the charts to reach each other.
+class _SwipeBand extends StatefulWidget {
+  const _SwipeBand({required this.pages});
+
+  final List<_SwipePage> pages;
+
+  @override
+  State<_SwipeBand> createState() => _SwipeBandState();
+}
+
+class _SwipeBandState extends State<_SwipeBand> {
+  final PageController _controller = PageController();
+  int _index = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeSlideIn(
+      delay: const Duration(milliseconds: 360),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _SwipeTabs(
+            pages: widget.pages,
+            index: _index,
+            onSelect: (i) => _controller.animateToPage(
+              i,
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 340,
+            child: PageView.builder(
+              controller: _controller,
+              itemCount: widget.pages.length,
+              onPageChanged: (i) => setState(() => _index = i),
+              itemBuilder: (context, i) => SingleChildScrollView(
+                child: widget.pages[i].child,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The tab strip above the swipe area. It doubles as the affordance that tells
+/// you there is a second panel to swipe to, and it takes you there in one tap
+/// for anyone who does not want to fling.
+class _SwipeTabs extends StatelessWidget {
+  const _SwipeTabs({
+    required this.pages,
+    required this.index,
+    required this.onSelect,
+  });
+
+  final List<_SwipePage> pages;
+  final int index;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final texts = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: scheme.surface.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: <Widget>[
+          for (var i = 0; i < pages.length; i++)
+            Expanded(
+              child: GestureDetector(
+                onTap: () => onSelect(i),
+                behavior: HitTestBehavior.opaque,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  decoration: BoxDecoration(
+                    color: i == index
+                        ? (pages[i].tint ?? scheme.primary).withValues(alpha: 0.16)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: i == index
+                          ? (pages[i].tint ?? scheme.primary)
+                              .withValues(alpha: 0.55)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Icon(
+                        pages[i].icon,
+                        size: 15,
+                        color: i == index
+                            ? (pages[i].tint ?? scheme.primary)
+                            : scheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 7),
+                      Flexible(
+                        child: Text(
+                          pages[i].label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: texts.labelLarge?.copyWith(
+                            fontWeight: i == index ? FontWeight.w800 : null,
+                            color: i == index
+                                ? scheme.onSurface
+                                : scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 
@@ -465,120 +631,124 @@ class _AttentionPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final texts = Theme.of(context).textTheme;
-    return FadeSlideIn(
-      delay: const Duration(milliseconds: 360),
-      child: Container(
-        decoration: overviewPanelDecoration(context),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            PanelHeader(
-              child: PanelTitle(
-                title: 'Needs attention',
-                icon: Icons.priority_high_rounded,
-                trailing: invoices.isEmpty
-                    ? null
-                    : MiniPill(
-                        '${invoices.length} late',
-                        color: Aurora.rose,
-                        dense: true,
-                      ),
-              ),
+    // Red only while there is something red to report. An all-clear is calm,
+    // because a permanently red panel stops meaning anything.
+    final alerting = invoices.isNotEmpty;
+    return Container(
+      decoration: alerting
+          ? alertPanelDecoration(context)
+          : overviewPanelDecoration(context),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          PanelHeader(
+            tint: alerting ? Aurora.rose : null,
+            child: PanelTitle(
+              title: 'Needs attention',
+              icon: Icons.priority_high_rounded,
+              iconColor: alerting ? Aurora.rose : null,
+              trailing: invoices.isEmpty
+                  ? null
+                  : MiniPill(
+                      '${invoices.length} late',
+                      color: Aurora.rose,
+                      dense: true,
+                    ),
             ),
-            if (invoices.isEmpty)
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-                child: Column(
-                  children: <Widget>[
-                    Icon(
-                      Icons.verified_rounded,
-                      size: 30,
-                      color: Aurora.emerald,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Nothing is past its date',
-                      style: texts.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Every invoice is either settled or still within its terms.',
-                      textAlign: TextAlign.center,
-                      style: texts.bodySmall
-                          ?.copyWith(color: scheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              )
-            else
-              for (final invoice in invoices)
-                HoverRow(
-                  onTap: () => context.go('/invoices/${invoice.id}'),
-                  stripe: Aurora.rose,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 11,
+          ),
+          if (invoices.isEmpty)
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+              child: Column(
+                children: <Widget>[
+                  Icon(
+                    Icons.verified_rounded,
+                    size: 30,
+                    color: Aurora.emerald,
                   ),
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Text(
-                              nameOf(invoice.supplierId),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: texts.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${invoice.invoiceNumber} · due ${formatDate(invoice.dueDate)}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: texts.bodySmall
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                  const SizedBox(height: 10),
+                  Text(
+                    'Nothing is past its date',
+                    style: texts.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Every invoice is either settled or still within its terms.',
+                    textAlign: TextAlign.center,
+                    style: texts.bodySmall
+                        ?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            )
+          else
+            for (final invoice in invoices)
+              HoverRow(
+                onTap: () => context.go('/invoices/${invoice.id}'),
+                stripe: Aurora.rose,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 11,
+                ),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          Money(
-                            invoice.balancePesewas,
-                            tone: MoneyTone.strong,
-                            color: Aurora.rose,
-                          ),
-                          const SizedBox(height: 3),
                           Text(
-                            '${daysLate(invoice, now)}d late',
-                            style: texts.labelSmall?.copyWith(
-                              color: Aurora.rose,
-                              fontWeight: FontWeight.w800,
-                            ),
+                            nameOf(invoice.supplierId),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: texts.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${invoice.invoiceNumber} · due ${formatDate(invoice.dueDate)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: texts.bodySmall
+                                ?.copyWith(color: scheme.onSurfaceVariant),
                           ),
                         ],
                       ),
-                      const SizedBox(width: 6),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        size: 18,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Money(
+                          invoice.balancePesewas,
+                          tone: MoneyTone.strong,
+                          color: Aurora.rose,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${daysLate(invoice, now)}d late',
+                          style: texts.labelSmall?.copyWith(
+                            color: Aurora.rose,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ],
                 ),
-          ],
-        ),
+              ),
+        ],
       ),
     );
   }
@@ -718,9 +888,7 @@ class _RecentPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final texts = Theme.of(context).textTheme;
-    return FadeSlideIn(
-      delay: const Duration(milliseconds: 480),
-      child: Container(
+    return Container(
         decoration: overviewPanelDecoration(context),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -818,8 +986,7 @@ class _RecentPanel extends StatelessWidget {
                     ],
                   ),
                 ),
-          ],
-        ),
+        ],
       ),
     );
   }

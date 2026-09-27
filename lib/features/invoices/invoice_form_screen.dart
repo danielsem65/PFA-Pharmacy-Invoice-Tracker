@@ -453,9 +453,11 @@ class _InvoiceFormScreenState extends ConsumerState<InvoiceFormScreen> {
         title: Text(_isEditing ? 'Edit Invoice' : 'New Invoice'),
       ),
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1400),
+      child: Center(
+        // Wide enough to keep the two-column form, narrow enough that a field
+        // never runs the length of a maximised window.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1120),
             child: Form(
               key: _formKey,
               child: ListView(

@@ -236,7 +236,10 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
               children: [
                 ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1000),
+                  // A payment is a short form. Letting it spread across a wide
+                  // window only makes the ticks harder to line up with the
+                  // amounts beside them.
+                  constraints: const BoxConstraints(maxWidth: 860),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [

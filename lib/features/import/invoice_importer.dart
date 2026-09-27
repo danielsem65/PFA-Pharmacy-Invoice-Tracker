@@ -341,12 +341,18 @@ class InvoiceImportPlan {
 /// holds what. Rows sharing a supplier and invoice number are folded into one
 /// invoice, so a sheet that lists one medicine per line still produces a
 /// single invoice with several items.
+///
+/// [paidByInvoiceNumber] carries the amounts a workbook's payments sheet adds
+/// up to each invoice number, keyed by lower-cased number. It is only needed
+/// when the sheet's own paid column holds formulas, which is the case for a
+/// workbook this app exported.
 InvoiceImportPlan buildImportPlan({
   required XlsxSheet sheet,
   required int headerRowIndex,
   required ImportMapping mapping,
   required List<Supplier> existingSuppliers,
   required List<SupplierInvoice> existingInvoices,
+  Map<String, int>? paidByInvoiceNumber,
   bool skipExisting = true,
   DateTime? today,
 }) {
@@ -471,6 +477,14 @@ InvoiceImportPlan buildImportPlan({
       newSuppliers.add(supplier);
     }
 
+    // Our own export keeps "Paid" as a formula, so the cell has no number to
+    // read. The payments it was summing still exist on the Payments sheet, so
+    // the total is worked out from those rows instead of being lost.
+    var paid = group.paidPesewas;
+    if (paid == 0 && paidByInvoiceNumber != null) {
+      paid = paidByInvoiceNumber[group.number.trim().toLowerCase()] ?? 0;
+    }
+
     invoices.add(SupplierInvoice(
       id: 'i_xlsx_${stamp}_${invoices.length}',
       supplierId: supplier.id,
@@ -480,7 +494,7 @@ InvoiceImportPlan buildImportPlan({
       dueDate: dueDate,
       amountPesewas: amount,
       taxRatePercent: group.taxPercent,
-      amountPaidPesewas: group.paidPesewas,
+      amountPaidPesewas: paid,
       reference: group.reference,
       description: group.description,
       paidDate: group.paidDate,
@@ -606,6 +620,44 @@ class _Group {
   }
 }
 
+/// Adds up the payments sheet of one of our own exports, keyed by lower-cased
+/// invoice number.
+///
+/// Returns null when there is no payments sheet to read, so that an unrelated
+/// workbook is left alone rather than being treated as having paid nothing.
+Map<String, int>? paidTotalsByInvoiceNumber(XlsxWorkbook workbook) {
+  final XlsxSheet payments;
+  try {
+    payments = workbook.sheet('Payments');
+  } catch (_) {
+    return null;
+  }
+  if (payments.rowCount < 2) return const {};
+
+  final headers = [for (final cell in payments.rowAt(0)) displayText(cell)];
+  var numberColumn = -1;
+  var amountColumn = -1;
+  for (var c = 0; c < headers.length; c++) {
+    final heading = normalizeHeader(headers[c]);
+    if (heading.contains('invoice')) numberColumn = c;
+    if (heading.contains('amount')) amountColumn = c;
+  }
+  if (numberColumn < 0 || amountColumn < 0) return const {};
+
+  final totals = <String, int>{};
+  for (var r = 1; r < payments.rowCount; r++) {
+    if (payments.isBlank(r)) continue;
+    final row = payments.rowAt(r);
+    if (numberColumn >= row.length || amountColumn >= row.length) continue;
+    final number = displayText(row[numberColumn]).trim().toLowerCase();
+    if (number.isEmpty) continue;
+    final amount = parseNumber(row[amountColumn]);
+    if (amount == null) continue;
+    totals[number] = (totals[number] ?? 0) + (amount * 100).round();
+  }
+  return totals;
+}
+
 /// Maps a free-text payment method onto one the app knows, or null.
 String? matchPaymentMethod(String text) {
   final t = text.trim().toLowerCase();
@@ -646,6 +698,9 @@ class _RowReader {
 
 String displayText(Object? value) {
   if (value == null) return '';
+  // A formula is not a value. Reading its text as though it were one is how
+  // "=SUMIF(Payments!$C:$C,$B2,...)" turns into the number 2.
+  if (value is XlsxFormula) return '';
   if (value is String) return value;
   if (value is double && value == value.roundToDouble() && value.abs() < 1e15) {
     return value.toStringAsFixed(0);
@@ -658,6 +713,7 @@ double? parseNumber(Object? value) {
   if (value == null) return null;
   if (value is num) return value.toDouble();
   if (value is bool) return null;
+  if (value is XlsxFormula) return null;
   final raw = value.toString().trim();
   if (raw.isEmpty) return null;
 
@@ -683,6 +739,7 @@ DateTime? parseDate(Object? value) {
   if (value is DateTime) return dateOnly(value);
   if (value is num) return _fromSerial(value.toDouble());
   if (value is bool) return null;
+  if (value is XlsxFormula) return null;
   final text = value.toString().trim();
   if (text.isEmpty) return null;
 

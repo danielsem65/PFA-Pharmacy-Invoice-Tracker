@@ -186,7 +186,7 @@ void main() {
       expect(displayText(sheet.rowAt(2)[product]), 'ORS Sachet');
     });
 
-    test('writes the summary totals in as numbers too', () {
+    test('points the summary totals at the invoice sheet', () {
       final sheet = readXlsx(buildSampleWorkbook()).sheet('Summary');
 
       Object? valueOf(String label) {
@@ -198,12 +198,52 @@ void main() {
         fail('the summary has no row labelled "$label"');
       }
 
-      num totalOf(String label) => valueOf(label)! as num;
+      String formulaOf(String label) {
+        final value = valueOf(label);
+        expect(value, isA<XlsxFormula>(), reason: '$label is not a formula');
+        return (value! as XlsxFormula).formula;
+      }
 
-      expect(totalOf('Total billed (GH₵)'), closeTo(5175.00, 0.001));
-      expect(totalOf('Total paid (GH₵)'), closeTo(1000.00, 0.001));
-      expect(totalOf('Outstanding (GH₵)'), closeTo(4175.00, 0.001));
-      expect(valueOf('Invoices'), '1');
+      // The money is worked out from the invoice sheet, so a payment added
+      // there moves these three lines without anyone editing the summary.
+      expect(formulaOf('Total billed (GH₵)'), 'SUM(Invoices!\$J\$2:\$J\$2)');
+      expect(formulaOf('Total paid (GH₵)'), 'SUM(Invoices!\$K\$2:\$K\$2)');
+      expect(formulaOf('Outstanding (GH₵)'), 'SUM(Invoices!\$L\$2:\$L\$2)');
+      expect(formulaOf('Invoices'), 'COUNTA(Invoices!\$B\$2:\$B\$2)');
+    });
+
+    test('works out total, paid and balance on the invoice sheet', () {
+      final sheet = readXlsx(buildSampleWorkbook()).sheet('Invoices');
+      final headers = headersOf(sheet, 0);
+
+      String formulaIn(String header) {
+        final value = sheet.rowAt(1)[headers.indexOf(header)];
+        expect(value, isA<XlsxFormula>(), reason: '$header is not a formula');
+        return (value! as XlsxFormula).formula;
+      }
+
+      // 4500 at 15% is 5175, and a 1000 payment leaves 4175 owing.
+      expect(formulaIn('Total (GH₵)'), 'I2+ROUND(I2*H2/100,2)');
+      expect(
+        formulaIn('Paid (GH₵)'),
+        'SUMIF(Payments!\$C:\$C,\$B2,Payments!\$D:\$D)',
+      );
+      expect(formulaIn('Balance (GH₵)'), 'J2-K2');
+    });
+
+    test('adds up each item from its boxes and price', () {
+      final sheet = readXlsx(buildSampleWorkbook()).sheet('Invoice Items');
+      final total = headersOf(sheet, 0).indexOf('Line total (GH₵)');
+      final value = sheet.rowAt(1)[total];
+      expect(value, isA<XlsxFormula>());
+      expect((value! as XlsxFormula).formula, 'D2*F2');
+    });
+
+    test('never reads a formula as though it were a number', () {
+      // Otherwise "SUMIF(Payments!$C:$C,$B2,...)" is read as the number 2.
+      expect(displayText(const XlsxFormula('SUMIF(A:A,B2,C:C)')), '');
+      expect(parseNumber(const XlsxFormula('SUMIF(A:A,B2,C:C)')), isNull);
+      expect(parseDate(const XlsxFormula('TODAY()')), isNull);
     });
 
     test('records when the export was made', () {
@@ -229,6 +269,9 @@ void main() {
         mapping: mapping,
         existingSuppliers: const [],
         existingInvoices: const [],
+        // Paid is a formula in our own export, so it is added up from the
+        // payments sheet rather than read off the invoice row.
+        paidByInvoiceNumber: paidTotalsByInvoiceNumber(workbook),
       );
 
       expect(plan.invoices, hasLength(1));
@@ -246,6 +289,51 @@ void main() {
       expect(imported.lines, isEmpty);
       expect(plan.newSuppliers.single.name, 'Medi Trust');
       expect(plan.newSuppliers.single.id, imported.supplierId);
+    });
+
+    test('adds the payments sheet up per invoice number', () {
+      final workbook = readXlsx(buildSampleWorkbook());
+      final totals = paidTotalsByInvoiceNumber(workbook);
+      expect(totals, isNotNull);
+      expect(totals!['inv-77'], 100000);
+    });
+
+    test('loses no paid money when the paid column is a formula', () {
+      // Two payments against one invoice, neither of which is written on the
+      // invoice row itself.
+      final workbook = XlsxWorkbook([
+        XlsxSheet('Invoices', [
+          ['Supplier', 'Invoice No', 'Amount', 'Paid'],
+          ['Medi Trust', 'INV-9', 900.0, const XlsxFormula('SUMIF(A:A,B2,C:C)')],
+        ]),
+        XlsxSheet('Payments', [
+          ['Date', 'Supplier', 'Invoice No', 'Amount'],
+          ['2026-03-04', 'Medi Trust', 'INV-9', 250.0],
+          ['2026-03-09', 'Medi Trust', 'INV-9', 150.0],
+          ['2026-03-09', 'City Pharmacy', 'CP-3', 99.0],
+        ]),
+      ]);
+
+      final plan = buildImportPlan(
+        sheet: workbook.sheet('Invoices'),
+        headerRowIndex: 0,
+        mapping: detectMapping(const ['Supplier', 'Invoice No', 'Amount', 'Paid']),
+        existingSuppliers: const [],
+        existingInvoices: const [],
+        paidByInvoiceNumber: paidTotalsByInvoiceNumber(workbook),
+      );
+
+      expect(plan.invoices.single.amountPaidPesewas, 40000);
+    });
+
+    test('leaves a workbook without a payments sheet alone', () {
+      final workbook = XlsxWorkbook([
+        XlsxSheet('Invoices', [
+          ['Supplier', 'Invoice No', 'Amount'],
+          ['Medi Trust', 'INV-9', 900.0],
+        ]),
+      ]);
+      expect(paidTotalsByInvoiceNumber(workbook), isNull);
     });
 
     test('reads the item sheet back as lines on the invoice', () {

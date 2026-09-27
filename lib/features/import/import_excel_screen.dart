@@ -774,12 +774,18 @@ class _ImportExcelScreenState extends ConsumerState<ImportExcelScreen> {
           .join(','),
     ].join('|');
     if (_plan != null && _planKey == key) return _plan!;
+    final workbook = _workbook;
     final plan = buildImportPlan(
       sheet: sheet,
       headerRowIndex: _headerRow,
       mapping: _mapping,
       existingSuppliers: ref.read(suppliersProvider),
       existingInvoices: ref.read(invoicesProvider),
+      // A workbook of ours keeps paid-to-date as a formula, so the money is
+      // added up from the payments sheet rather than read off the invoice row.
+      paidByInvoiceNumber: workbook == null
+          ? null
+          : paidTotalsByInvoiceNumber(workbook),
       skipExisting: _skipExisting,
     );
     _plan = plan;

@@ -77,6 +77,8 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final texts = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Supplier' : 'New Supplier'),
@@ -90,26 +92,23 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
               child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                // A tinted card like every other panel in the app, rather than
+                // a slab of fixed dark colour that ignored the theme.
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF0B3B52),
-                        Color(0xFF0E7490),
-                        Color(0xFF0F9D77),
+                      colors: <Color>[
+                        scheme.primaryContainer.withValues(alpha: 0.55),
+                        scheme.tertiaryContainer.withValues(alpha: 0.45),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF0E7490).withValues(alpha: 0.25),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
+                    border: Border.all(
+                      color: scheme.primary.withValues(alpha: 0.25),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,21 +118,21 @@ class _SupplierFormScreenState extends ConsumerState<SupplierFormScreen> {
                             ? Icons.storefront_outlined
                             : Icons.add_business_outlined,
                         size: 34,
-                        color: Colors.white,
+                        color: scheme.primary,
                       ),
                       const SizedBox(height: 10),
                       Text(
                         _isEditing ? 'Update this distributor' : 'Add a distributor',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
+                        style: texts.titleMedium?.copyWith(
+                              color: scheme.onSurface,
                               fontWeight: FontWeight.w800,
                             ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'The ones you buy medicines on credit from.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.8),
+                        style: texts.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
                             ),
                       ),
                     ],

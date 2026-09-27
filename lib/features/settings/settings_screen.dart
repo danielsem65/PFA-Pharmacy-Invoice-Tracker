@@ -85,174 +85,182 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _seed(profile);
 
     return Scaffold(
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 28),
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
-            child: PageHeader(
-              title: 'Settings',
-              subtitle: 'Your details on every printed invoice',
-              icon: Icons.tune,
-              accentIndex: 4,
-              leading: IconButton(
-                tooltip: 'Back',
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/');
-                  }
-                },
-              ),
-              actions: <Widget>[
-                FilledButton.icon(
-                  onPressed: _saveProfile,
-                  icon: const Icon(Icons.save_outlined),
-                  label: const Text('Save details'),
+      // Settings is a column of forms, and a form stretched across a wide
+      // window is a form nobody can read to the end of a line. Capping the page
+      // keeps every field at a comfortable measure and centres the column.
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 920),
+          child: ListView(
+            padding: const EdgeInsets.only(bottom: 28),
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+                child: PageHeader(
+                  title: 'Settings',
+                  subtitle: 'Your details on every printed invoice',
+                  icon: Icons.tune,
+                  accentIndex: 4,
+                  leading: IconButton(
+                    tooltip: 'Back',
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/');
+                      }
+                    },
+                  ),
+                  actions: <Widget>[
+                    FilledButton.icon(
+                      onPressed: _saveProfile,
+                      icon: const Icon(Icons.save_outlined),
+                      label: const Text('Save details'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-            child: FadeSlideIn(
-              delay: const Duration(milliseconds: 70),
-              child: _Card(
-                title: 'Business details',
-                subtitle:
-                    'Printed at the top of the invoice. Leave a field blank and '
-                    'it is left off the page.',
-                icon: Icons.storefront_outlined,
-                accentIndex: 0,
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: <Widget>[
-                      TextFormField(
-                        controller: _name,
-                        decoration: const InputDecoration(
-                          labelText: 'Business name',
-                          hintText: 'PFA Pharmacy',
-                        ),
-                        onChanged: (_) => _dirty = true,
-                        textInputAction: TextInputAction.next,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _address,
-                        decoration: const InputDecoration(
-                          labelText: 'Address',
-                          hintText: 'Street, town',
-                        ),
-                        onChanged: (_) => _dirty = true,
-                        textInputAction: TextInputAction.next,
-                      ),
-                      const SizedBox(height: 12),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final phone = TextFormField(
-                            controller: _phone,
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                child: FadeSlideIn(
+                  delay: const Duration(milliseconds: 70),
+                  child: _Card(
+                    title: 'Business details',
+                    subtitle:
+                        'Printed at the top of the invoice. Leave a field blank and '
+                        'it is left off the page.',
+                    icon: Icons.storefront_outlined,
+                    accentIndex: 0,
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: <Widget>[
+                          TextFormField(
+                            controller: _name,
                             decoration: const InputDecoration(
-                              labelText: 'Phone',
+                              labelText: 'Business name',
+                              hintText: 'PFA Pharmacy',
                             ),
                             onChanged: (_) => _dirty = true,
-                            keyboardType: TextInputType.phone,
                             textInputAction: TextInputAction.next,
-                          );
-                          final email = TextFormField(
-                            controller: _email,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _address,
                             decoration: const InputDecoration(
-                              labelText: 'Email',
+                              labelText: 'Address',
+                              hintText: 'Street, town',
                             ),
                             onChanged: (_) => _dirty = true,
-                            keyboardType: TextInputType.emailAddress,
                             textInputAction: TextInputAction.next,
-                          );
-                          if (constraints.maxWidth < 520) {
-                            return Column(
-                              children: <Widget>[
-                                phone,
-                                const SizedBox(height: 12),
-                                email,
-                              ],
-                            );
-                          }
-                          return Row(
-                            children: <Widget>[
-                              Expanded(child: phone),
-                              const SizedBox(width: 12),
-                              Expanded(child: email),
-                            ],
-                          );
-                        },
+                          ),
+                          const SizedBox(height: 12),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final phone = TextFormField(
+                                controller: _phone,
+                                decoration: const InputDecoration(
+                                  labelText: 'Phone',
+                                ),
+                                onChanged: (_) => _dirty = true,
+                                keyboardType: TextInputType.phone,
+                                textInputAction: TextInputAction.next,
+                              );
+                              final email = TextFormField(
+                                controller: _email,
+                                decoration: const InputDecoration(
+                                  labelText: 'Email',
+                                ),
+                                onChanged: (_) => _dirty = true,
+                                keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.next,
+                              );
+                              if (constraints.maxWidth < 520) {
+                                return Column(
+                                  children: <Widget>[
+                                    phone,
+                                    const SizedBox(height: 12),
+                                    email,
+                                  ],
+                                );
+                              }
+                              return Row(
+                                children: <Widget>[
+                                  Expanded(child: phone),
+                                  const SizedBox(width: 12),
+                                  Expanded(child: email),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _tin,
+                            decoration: const InputDecoration(
+                              labelText: 'TIN',
+                              helperText: 'Shown after the address when filled in',
+                            ),
+                            onChanged: (_) => _dirty = true,
+                            textInputAction: TextInputAction.done,
+                          ),
+                          const SizedBox(height: 18),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: FilledButton.icon(
+                              onPressed: _saveProfile,
+                              icon: const Icon(Icons.save_outlined),
+                              label: const Text('Save details'),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _tin,
-                        decoration: const InputDecoration(
-                          labelText: 'TIN',
-                          helperText: 'Shown after the address when filled in',
-                        ),
-                        onChanged: (_) => _dirty = true,
-                        textInputAction: TextInputAction.done,
-                      ),
-                      const SizedBox(height: 18),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: FilledButton.icon(
-                          onPressed: _saveProfile,
-                          icon: const Icon(Icons.save_outlined),
-                          label: const Text('Save details'),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-            child: FadeSlideIn(
-              delay: const Duration(milliseconds: 130),
-              child: _Card(
-                title: 'Printing',
-                subtitle:
-                    'Which layout the Print button uses. "Ask each time" opens '
-                    'the picker every time you print.',
-                icon: Icons.print_outlined,
-                accentIndex: 1,
-                child: _LayoutChoice(
-                  settings: printSettings,
-                  onChanged: (layout) =>
-                      ref.read(printSettingsProvider.notifier).setDefaultLayout(layout),
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-            child: FadeSlideIn(
-              delay: const Duration(milliseconds: 190),
-              child: _Card(
-                title: 'Data',
-                subtitle: 'Everything is stored on this PC only.',
-                icon: Icons.lock_outline,
-                accentIndex: 2,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.go('/'),
-                    icon: const Icon(Icons.receipt_long_outlined),
-                    label: const Text('Back to invoices'),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                child: FadeSlideIn(
+                  delay: const Duration(milliseconds: 130),
+                  child: _Card(
+                    title: 'Printing',
+                    subtitle:
+                        'Which layout the Print button uses. "Ask each time" opens '
+                        'the picker every time you print.',
+                    icon: Icons.print_outlined,
+                    accentIndex: 1,
+                    child: _LayoutChoice(
+                      settings: printSettings,
+                      onChanged: (layout) =>
+                          ref.read(printSettingsProvider.notifier).setDefaultLayout(layout),
+                    ),
                   ),
                 ),
               ),
-            ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                child: FadeSlideIn(
+                  delay: const Duration(milliseconds: 190),
+                  child: _Card(
+                    title: 'Data',
+                    subtitle: 'Everything is stored on this PC only.',
+                    icon: Icons.lock_outline,
+                    accentIndex: 2,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.go('/'),
+                        icon: const Icon(Icons.receipt_long_outlined),
+                        label: const Text('Back to invoices'),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
