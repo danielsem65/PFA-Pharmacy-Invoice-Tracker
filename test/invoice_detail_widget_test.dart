@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pfa_pharmacy_invoice_tracker/app.dart';
+import 'package:pfa_pharmacy_invoice_tracker/core/format.dart';
 import 'package:pfa_pharmacy_invoice_tracker/data/app_database.dart';
 import 'package:pfa_pharmacy_invoice_tracker/models/supplier_invoice.dart';
 import 'package:pfa_pharmacy_invoice_tracker/widgets/app_sidebar.dart';
@@ -92,9 +93,10 @@ void main() {
         reason: why,
       );
       expect(find.text('Partially Paid'), findsOneWidget);
-      // The balance is on a tile and repeated in words, because money owed is
-      // the one figure worth saying twice.
-      expect(find.text('BALANCE'), findsNWidgets(2));
+      // The balance is said three times on purpose: as the figure the page
+      // opens on, on its own tile, and in words.
+      expect(find.text('BALANCE'), findsNWidgets(3));
+      expect(find.text(formatPesewas(40985)), findsNWidgets(2));
     });
 
     testWidgets('keeps the paperwork on the dark panel', (tester) async {
