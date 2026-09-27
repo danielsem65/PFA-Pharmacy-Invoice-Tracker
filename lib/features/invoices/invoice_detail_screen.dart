@@ -467,7 +467,7 @@ class _Figures extends StatelessWidget {
         value: formatPesewas(inv.totalPesewas),
         foot: inv.taxRatePercent > 0
             ? '${formatPesewas(inv.amountPesewas)} + '
-                '${_rate(inv.taxRatePercent)} tax'
+                '${_rate(inv.taxRatePercent)}% tax'
             : 'no tax on this invoice',
       ),
       _FigureTile(
