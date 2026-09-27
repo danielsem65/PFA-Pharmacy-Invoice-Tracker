@@ -487,15 +487,16 @@ class _Figures extends StatelessWidget {
         foot: !inv.owesMoney
             ? 'settled in full'
             : days < 0
-                ? '${_plural(-days, 'day')} late'
+                ? '${_plural(-days, 'day', 'days')} late'
                 : days == 0
                     ? 'due today'
-                    : 'due in ${_plural(days, 'day')}',
+                    : 'due in ${_plural(days, 'day', 'days')}',
       ),
       _FigureTile(
         label: 'Items',
         value: '${inv.lines.length}',
-        foot: '${_plural(boxes, 'box')} · ${_plural(pieces, 'piece')}',
+        foot: '${_plural(boxes, 'box', 'boxes')} · '
+            '${_plural(pieces, 'piece', 'pieces')}',
       ),
     ];
 
@@ -615,7 +616,9 @@ class _NotesCard extends StatelessWidget {
   }
 }
 
-String _plural(int n, String one) => '$n $one${n == 1 ? '' : 's'}';
+/// English does not always reach the plural by adding an s, so the many form
+/// is spelled out rather than guessed at.
+String _plural(int n, String one, String many) => n == 1 ? '$n $one' : '$n $many';
 
 /// A whole number of a percent reads as 15, not 15.0; a rate that is not whole
 /// is kept as written so the invoice matches the sheet it came from.
