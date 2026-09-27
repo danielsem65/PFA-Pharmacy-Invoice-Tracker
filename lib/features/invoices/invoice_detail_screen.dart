@@ -77,193 +77,64 @@ class InvoiceDetailScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                _Hero(invoice: inv, supplierName: supplierName, status: status),
-                const SizedBox(height: 20),
+                // Pulse: the figure that matters is on the dark panel, four
+                // answers sit under it, and the paperwork comes last.
+                _Hero(
+                  invoice: inv,
+                  supplierName: supplierName,
+                  status: status,
+                ),
+                const SizedBox(height: 16),
+                _Figures(invoice: inv, now: now),
+                if (inv.lines.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _ItemsCard(invoice: inv),
+                ],
+                const SizedBox(height: 16),
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final wide = constraints.maxWidth >= 760;
-                    final details = [
-                      _line(context, <Widget>[
-                        _pair(context, 'Supplier', supplierName),
-                      ]),
-                      const SizedBox(height: 2),
-                      _line(context, <Widget>[
-                        _pair(context, 'Invoice No', inv.invoiceNumber),
-                        if (inv.reference.isNotEmpty) ...<Widget>[
-                          const SizedBox(width: 28),
-                          _pair(context, 'Ref / PO', inv.reference),
-                        ],
-                      ]),
-                      if (inv.description.isNotEmpty)
-                        _line(context, <Widget>[
-                          _pair(context, 'Description', inv.description),
-                        ]),
-                      if (inv.lines.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        _ItemsCard(invoice: inv),
-                      ],
-                      const Divider(height: 24),
-                      _line(context, <Widget>[
-                        _pair(context, 'Amount', formatPesewas(inv.amountPesewas)),
-                      ]),
-                      if (inv.taxRatePercent > 0)
-                        _line(context, <Widget>[
-                          _pair(
-                            context,
-                            'Tax (${inv.taxRatePercent}%)',
-                            formatPesewas(inv.taxPesewas),
-                          ),
-                        ]),
-                      _line(context, <Widget>[
-                        _pair(context, 'Total', formatPesewas(inv.totalPesewas)),
-                      ]),
-                      _line(context, <Widget>[
-                        _pair(
-                          context,
-                          'Paid',
-                          formatPesewas(inv.amountPaidPesewas),
-                        ),
-                      ]),
-                      if (inv.paidDate != null)
-                        _line(context, <Widget>[
-                          _pair(
-                            context,
-                            'Paid Date',
-                            formatDate(inv.paidDate!),
-                          ),
-                        ]),
-                      _line(context, <Widget>[
-                        _pair(context, 'Payment method', inv.paymentMethod),
-                      ]),
-                      _line(context, <Widget>[
-                        _pair(
-                          context,
-                          'Balance',
-                          formatPesewas(inv.balancePesewas),
-                        ),
-                      ]),
-                      if (inv.notes.isNotEmpty) ...[
-                        const Divider(height: 24),
-                        _line(context, <Widget>[
-                          _pair(context, 'Notes', inv.notes),
-                        ]),
-                      ],
-                    ];
-
-                    // The dates and the status sit with the paperwork at the
-                    // bottom, not wedged between the items and the money.
-                    final paperTrail = <Widget>[
-                      _line(context, <Widget>[
-                        _pair(
-                          context,
-                          'Invoice Date',
-                          formatDate(inv.invoiceDate),
-                        ),
-                      ]),
-                      _line(context, <Widget>[
-                        _pair(context, 'Received', formatDate(inv.receivedDate)),
-                      ]),
-                      _line(context, <Widget>[
-                        _pair(context, 'Due', formatDate(inv.dueDate)),
-                      ]),
-                      _line(context, <Widget>[
-                        _pair(context, 'Status', status.label),
-                      ]),
-                    ];
-
-                    final side = <Widget>[
+                    final words = <Widget>[
                       _AmountWordsCard(invoice: inv),
-                      if (inv.receipts.isNotEmpty) ...[
+                      if (inv.notes.isNotEmpty) ...[
                         const SizedBox(height: 16),
-                        _ReceiptsCard(invoice: inv, ref: ref, onOpen: _openReceipt),
+                        _NotesCard(note: inv.notes),
                       ],
-                      const SizedBox(height: 16),
-                      ...paperTrail,
                     ];
 
-                    if (!wide) {
+                    if (inv.receipts.isEmpty ||
+                        constraints.maxWidth < 640) {
                       return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [...details, ...side],
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: words,
                       );
                     }
+
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          flex: 5,
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: details,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: words,
                           ),
                         ),
-                        const SizedBox(width: 24),
+                        const SizedBox(width: 16),
                         SizedBox(
-                          width: 340,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: side,
+                          width: 360,
+                          child: _ReceiptsCard(
+                            invoice: inv,
+                            ref: ref,
+                            onOpen: _openReceipt,
                           ),
                         ),
                       ],
                     );
                   },
                 ),
-                const SizedBox(height: 24),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  /// One underlined line of the invoice, the way it is written on paper: the
-  /// label is bold, the answer to it is not, and the rule runs the whole width.
-  /// [segments] lets two short fields share a single line and a single rule.
-  Widget _line(BuildContext context, List<Widget> segments) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.8),
-          ),
-        ),
-      ),
-      child: Wrap(
-        spacing: 0,
-        runSpacing: 4,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: segments,
-      ),
-    );
-  }
-
-  /// A bold `Label:` followed by the value in normal weight.
-  Widget _pair(BuildContext context, String label, String value) {
-    final texts = Theme.of(context).textTheme;
-    return Text.rich(
-      TextSpan(
-        children: <InlineSpan>[
-          TextSpan(
-            text: '$label: ',
-            style: texts.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          TextSpan(
-            text: value,
-            style: texts.bodyLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
-              // Pinned rather than inherited: the answer to a label is read,
-              // not shouted, and a bolder theme should not change that.
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -328,14 +199,10 @@ class InvoiceDetailScreen extends ConsumerWidget {
       ),
     );
   }
-
-  String _displayName(String stored) {
-    final idx = stored.indexOf('_');
-    if (idx == -1) return stored;
-    return stored.substring(idx + 1).replaceAll('_', ' ');
-  }
 }
 
+/// The dark panel at the top: who it is for, where it stands, and the one
+/// number that decides what happens next.
 class _Hero extends StatelessWidget {
   const _Hero({
     required this.invoice,
@@ -350,21 +217,78 @@ class _Hero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inv = invoice;
+    final texts = Theme.of(context).textTheme;
     final accent = StatusBadge.colorOf(status);
+
+    final headline = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          supplierName,
+          style: texts.headlineSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          <String>[
+            inv.invoiceNumber,
+            if (inv.reference.isNotEmpty) 'Ref ${inv.reference}',
+            if (inv.description.isNotEmpty) inv.description,
+          ].join('   ·   '),
+          style: texts.bodySmall?.copyWith(
+            color: Colors.white.withValues(alpha: 0.72),
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+
+    // What is owed if anything is; otherwise what the whole thing came to, so
+    // a settled invoice never shows a big round zero.
+    final figure = Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          inv.owesMoney ? 'BALANCE' : 'TOTAL',
+          style: texts.labelSmall?.copyWith(
+            color: Colors.white.withValues(alpha: 0.7),
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          formatPesewas(
+            inv.owesMoney ? inv.balancePesewas : inv.totalPesewas,
+          ),
+          style: texts.headlineMedium?.copyWith(
+            color: inv.owesMoney ? const Color(0xFFFDE68A) : Aurora.emerald,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+
     return FadeSlideIn(
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: <Color>[Aurora.nightC, Color(0xFF123A4A), Aurora.nightB],
           ),
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(22),
           boxShadow: <BoxShadow>[
             BoxShadow(
-              color: accent.withValues(alpha: 0.28),
+              color: accent.withValues(alpha: 0.26),
               blurRadius: 24,
               offset: const Offset(0, 10),
             ),
@@ -373,67 +297,337 @@ class _Hero extends StatelessWidget {
         child: ParticleDrift(
           count: 16,
           color: accent,
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Under about half the width the supplier's name needs the room
+              // more than the figure does, so the figure drops below it.
+              final tight = constraints.maxWidth < 520;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (tight) ...[
+                    headline,
+                    const SizedBox(height: 14),
                     Row(
                       children: [
-                        Expanded(
-                          child: Text(
-                            inv.invoiceNumber,
-                            style: Theme.of(context).textTheme.headlineSmall
-                                ?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        StatusBadge(status: status),
+                        _HeroStatusPill(status: status),
+                        const Spacer(),
+                        figure,
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      supplierName,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
+                  ] else
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: headline),
+                        const SizedBox(width: 16),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: _HeroStatusPill(status: status),
+                        ),
+                        const SizedBox(width: 20),
+                        figure,
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    inv.owesMoney ? 'OUTSTANDING' : 'SETTLED',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.7),
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
-                        ),
+                  const SizedBox(height: 16),
+                  Container(
+                    height: 1,
+                    color: Colors.white.withValues(alpha: 0.14),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    formatPesewas(inv.balancePesewas),
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 24,
+                    runSpacing: 10,
+                    children: [
+                      _HeroMeta(
+                        label: 'Invoice date',
+                        value: formatDate(inv.invoiceDate),
+                      ),
+                      _HeroMeta(
+                        label: 'Received',
+                        value: formatDate(inv.receivedDate),
+                      ),
+                      _HeroMeta(
+                        label: 'Due',
+                        value: formatDate(inv.dueDate),
+                      ),
+                      _HeroMeta(
+                        label: 'Payment',
+                        value: inv.paymentMethod,
+                      ),
+                      if (inv.paidDate != null)
+                        _HeroMeta(
+                          label: 'Paid on',
+                          value: formatDate(inv.paidDate!),
                         ),
+                    ],
                   ),
                 ],
-              ),
-            ],
+              );
+            },
           ),
         ),
       ),
     );
   }
+}
+
+/// The status on the dark panel. [StatusBadge] picks ink for a light page, so
+/// it would be hard to read here; this is the same hue on its own ground.
+class _HeroStatusPill extends StatelessWidget {
+  const _HeroStatusPill({required this.status});
+
+  final InvoiceStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = StatusBadge.colorOf(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.55)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 7),
+          Text(
+            status.label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One quiet fact in the dark panel's foot: a muted label, a bright answer.
+class _HeroMeta extends StatelessWidget {
+  const _HeroMeta({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final texts = Theme.of(context).textTheme;
+    return Text.rich(
+      TextSpan(
+        children: <InlineSpan>[
+          TextSpan(
+            text: '$label ',
+            style: texts.bodySmall?.copyWith(
+              color: Colors.white.withValues(alpha: 0.62),
+            ),
+          ),
+          TextSpan(
+            text: value,
+            style: texts.bodySmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The four answers, before anything else on the page: what it came to, what
+/// has been paid, what is left and how long there is to pay it.
+class _Figures extends StatelessWidget {
+  const _Figures({required this.invoice, required this.now});
+
+  final SupplierInvoice invoice;
+  final DateTime now;
+
+  @override
+  Widget build(BuildContext context) {
+    final inv = invoice;
+    final days = inv.dueDate.difference(dateOnly(now)).inDays;
+    final boxes = inv.lines.fold(0, (sum, l) => sum + l.boxes);
+    final pieces = inv.lines.fold(0, (sum, l) => sum + l.pieceCount);
+    final settled = inv.totalPesewas <= 0
+        ? 0
+        : (inv.amountPaidPesewas * 100 / inv.totalPesewas).round();
+
+    final tiles = <Widget>[
+      _FigureTile(
+        label: 'Total',
+        value: formatPesewas(inv.totalPesewas),
+        foot: inv.taxRatePercent > 0
+            ? '${formatPesewas(inv.amountPesewas)} + '
+                '${_rate(inv.taxRatePercent)} tax'
+            : 'no tax on this invoice',
+      ),
+      _FigureTile(
+        label: 'Paid',
+        value: formatPesewas(inv.amountPaidPesewas),
+        valueColor: inv.amountPaidPesewas > 0
+            ? _readableStatus(context, InvoiceStatus.paid)
+            : null,
+        foot: '$settled% settled · ${inv.paymentMethod}',
+      ),
+      _FigureTile(
+        label: 'Balance',
+        value: formatPesewas(inv.balancePesewas),
+        valueColor: inv.owesMoney
+            ? _readableStatus(context, InvoiceStatus.partiallyPaid)
+            : _readableStatus(context, InvoiceStatus.paid),
+        foot: !inv.owesMoney
+            ? 'settled in full'
+            : days < 0
+                ? '${_plural(-days, 'day')} late'
+                : days == 0
+                    ? 'due today'
+                    : 'due in ${_plural(days, 'day')}',
+      ),
+      _FigureTile(
+        label: 'Items',
+        value: '${inv.lines.length}',
+        foot: '${_plural(boxes, 'box')} · ${_plural(pieces, 'piece')}',
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Four across once there is room for them to breathe, two otherwise.
+        final across = constraints.maxWidth >= 780;
+        final width = across
+            ? (constraints.maxWidth - 36) / 4
+            : (constraints.maxWidth - 12) / 2;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: <Widget>[
+            for (final tile in tiles) SizedBox(width: width, child: tile),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// One figure with a caption. The caption carries the detail the figure
+/// cannot hold itself, so nothing is lost by leading with the big number.
+class _FigureTile extends StatelessWidget {
+  const _FigureTile({
+    required this.label,
+    required this.value,
+    required this.foot,
+    this.valueColor,
+  });
+
+  final String label;
+  final String value;
+  final String foot;
+  final Color? valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final texts = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: texts.labelSmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 6),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: texts.headlineSmall?.copyWith(
+                color: valueColor ?? scheme.onSurface,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            foot,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: texts.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NotesCard extends StatelessWidget {
+  const _NotesCard({required this.note});
+
+  final String note;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final texts = Theme.of(context).textTheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Notes',
+            style: texts.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const Divider(height: 22),
+          Text(note, style: texts.bodyMedium?.copyWith(height: 1.5)),
+        ],
+      ),
+    );
+  }
+}
+
+String _plural(int n, String one) => '$n $one${n == 1 ? '' : 's'}';
+
+/// A whole number of a percent reads as 15, not 15.0; a rate that is not whole
+/// is kept as written so the invoice matches the sheet it came from.
+String _rate(double percent) =>
+    percent % 1 == 0 ? '${percent.toInt()}' : '$percent';
+
+/// The status hue, in the version that stays readable on this page's surface.
+Color _readableStatus(BuildContext context, InvoiceStatus status) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  return isDark
+      ? StatusBadge.colorOf(status)
+      : StatusBadge.inkOf(status);
 }
 
 class _AmountWordsCard extends StatelessWidget {
@@ -555,12 +749,14 @@ class _ReceiptsCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  String _displayName(String stored) {
-    final idx = stored.indexOf('_');
-    if (idx == -1) return stored;
-    return stored.substring(idx + 1).replaceAll('_', ' ');
-  }
+/// Receipts are stored with a generated prefix, so what a person sees is what
+/// came after it, with the leftovers spaced out.
+String _displayName(String stored) {
+  final idx = stored.indexOf('_');
+  if (idx == -1) return stored;
+  return stored.substring(idx + 1).replaceAll('_', ' ');
 }
 
 class _ItemsCard extends StatelessWidget {
@@ -588,12 +784,12 @@ class _ItemsCard extends StatelessWidget {
       bool right = false,
       TextStyle? style,
     }) => Text(
-      text,
-      textAlign: right ? TextAlign.right : TextAlign.left,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: style ?? texts.bodyMedium,
-    );
+          text,
+          textAlign: right ? TextAlign.right : TextAlign.left,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: style ?? texts.bodyMedium,
+        );
 
     return Container(
       width: double.infinity,
