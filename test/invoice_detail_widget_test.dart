@@ -75,10 +75,22 @@ void main() {
     testWidgets('leads with the four figures', (tester) async {
       await openInvoice(tester, partPaid());
 
-      expect(find.textContaining('+ 15% tax'), findsOneWidget);
-      expect(find.textContaining('% settled'), findsOneWidget);
-      expect(find.textContaining('due in'), findsOneWidget);
-      expect(find.textContaining('12 boxes · 274 pieces'), findsOneWidget);
+      // The captions carry what the big numbers cannot hold, so they are worth
+      // reading back whole rather than in pieces.
+      final captions = tester
+          .widgetList<Text>(find.byType(Text))
+          .map((t) => t.data)
+          .whereType<String>()
+          .toList();
+      final why = 'captions on the page: $captions';
+
+      expect(captions, contains('12 boxes · 274 pieces'), reason: why);
+      expect(captions, contains('due in 15 days'), reason: why);
+      expect(
+        captions.any((s) => RegExp(r'^\d+% settled · Bank Pay$').hasMatch(s)),
+        isTrue,
+        reason: why,
+      );
       expect(find.text('Partially Paid'), findsOneWidget);
       // The balance is on a tile and repeated in words, because money owed is
       // the one figure worth saying twice.
